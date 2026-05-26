@@ -2,7 +2,7 @@ import * as Notifications from "expo-notifications";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Download, LogOut, RotateCcw, Trash2, User } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Alert, Image, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Alert, Image, Modal, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { useAuth } from "@/auth/AuthContext";
@@ -18,6 +18,14 @@ const accents: AccentColor[] = ["Purple", "Blue", "Green", "Orange", "Red"];
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const fullDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const goals: MainGoal[] = ["Build muscle", "Lose weight", "Improve endurance", "Build discipline", "Stay healthy"];
+
+type ConfirmAction = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  destructive?: boolean;
+  onConfirm: () => Promise<void> | void;
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { theme } = useThemeMode();
@@ -65,6 +73,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   const { clearWorkoutHistory, exportProgressData, workoutHistory } = useWorkouts();
   const [username, setUsername] = useState(user?.username ?? "");
   const [usernameError, setUsernameError] = useState("");
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   useEffect(() => {
     setUsername(user?.username ?? "");
@@ -155,47 +164,56 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   };
 
   const exportData = () => {
-    Alert.alert("Export workout data?", "Are you sure you want to export your account, settings, goals, workout history, streak, exercise stats, and progress data as JSON?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Export", onPress: () => void shareExportData() }
-    ]);
+    setConfirmAction({
+      title: "Export workout data?",
+      message: "Are you sure you want to export your account, settings, goals, workout history, streak, exercise stats, and progress data as JSON?",
+      confirmLabel: "Export",
+      onConfirm: shareExportData
+    });
   };
 
   const clearHistory = () => {
-    Alert.alert("Clear workout history?", "Are you sure you want to delete all completed workouts, streak progress, calendar days, total minutes, and exercise counters? Your account, profile photo, goals, and settings will stay saved.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: async () => {
-          await clearWorkoutHistoryData();
-          await clearWorkoutHistory();
-        }
+    setConfirmAction({
+      title: "Clear workout history?",
+      message: "Are you sure you want to delete all completed workouts, streak progress, calendar days, total minutes, and exercise counters? Your account, profile photo, goals, and settings will stay saved.",
+      confirmLabel: "Clear",
+      destructive: true,
+      onConfirm: async () => {
+        await clearWorkoutHistoryData();
+        await clearWorkoutHistory();
       }
-    ]);
+    });
   };
 
   const resetApp = () => {
-    Alert.alert("Reset app?", "Are you sure you want to delete everything? This clears your account, profile photo, settings, goals, workouts, streak, and exercise counters.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Reset",
-        style: "destructive",
-        onPress: async () => {
-          await resetEntireApp();
-          await clearGoals();
-          await clearWorkoutHistory();
-          await resetAccount();
-        }
+    setConfirmAction({
+      title: "Reset app?",
+      message: "Are you sure you want to delete everything? This clears your account, profile photo, settings, goals, workouts, streak, and exercise counters.",
+      confirmLabel: "Reset",
+      destructive: true,
+      onConfirm: async () => {
+        await resetEntireApp();
+        await clearGoals();
+        await clearWorkoutHistory();
+        await resetAccount();
       }
-    ]);
+    });
   };
 
   const logoutUser = () => {
-    Alert.alert("Log out?", "Are you sure you want to log out? Your account, workout history, and settings will stay saved.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: () => void logout() }
-    ]);
+    setConfirmAction({
+      title: "Log out?",
+      message: "Are you sure you want to log out? Your account, workout history, and settings will stay saved.",
+      confirmLabel: "Log out",
+      destructive: true,
+      onConfirm: logout
+    });
+  };
+
+  const confirmCurrentAction = async () => {
+    const action = confirmAction;
+    setConfirmAction(null);
+    await action?.onConfirm();
   };
 
   return (
@@ -330,6 +348,19 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
         <AppButton title="Privacy policy" variant="ghost" onPress={() => navigation.navigate("PrivacyPolicy")} />
         <AppButton title="Terms" variant="ghost" onPress={() => navigation.navigate("Terms")} />
       </Section>
+
+      <Modal visible={Boolean(confirmAction)} transparent animationType="fade" onRequestClose={() => setConfirmAction(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{confirmAction?.title}</Text>
+            <Text style={[styles.modalBody, { color: theme.colors.muted }]}>{confirmAction?.message}</Text>
+            <View style={styles.modalActions}>
+              <AppButton title="Cancel" variant="ghost" onPress={() => setConfirmAction(null)} style={styles.modalButton} />
+              <AppButton title={confirmAction?.confirmLabel ?? "Confirm"} variant={confirmAction?.destructive ? "danger" : "primary"} onPress={confirmCurrentAction} style={styles.modalButton} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </AppScreen>
   );
 }
@@ -357,5 +388,38 @@ const styles = StyleSheet.create({
   day: { minWidth: 48, height: 38, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   dayText: { fontSize: 12, fontWeight: "900" },
   swatches: { flexDirection: "row", gap: 12 },
-  swatch: { width: 36, height: 36, borderRadius: 14, borderWidth: 3 }
+  swatch: { width: 36, height: 36, borderRadius: 14, borderWidth: 3 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.68)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 22
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 18,
+    gap: 12
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 0
+  },
+  modalBody: {
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 21
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4
+  },
+  modalButton: {
+    flex: 1
+  }
 });
