@@ -1,6 +1,6 @@
 import * as Notifications from "expo-notifications";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Download, RotateCcw, Trash2, User } from "lucide-react-native";
+import { Camera, Download, LogOut, RotateCcw, Trash2, User } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
@@ -60,7 +60,7 @@ function NumberInput({ value, onChange, suffix }: { value: number; onChange: (va
 export function SettingsScreen({ navigation }: { navigation: { navigate: (screen: string) => void } }) {
   const { theme, toggleScheme } = useThemeMode();
   const { preferences, updatePreference, resetPreferences } = usePreferences();
-  const { user, updateUsername, updateProfilePhoto, resetApp: resetAccount } = useAuth();
+  const { user, updateUsername, updateProfilePhoto, logout, resetApp: resetAccount } = useAuth();
   const { goals: userGoals, updateGoals, clearGoals } = useGoals();
   const { resetWorkouts } = useWorkouts();
   const [username, setUsername] = useState(user?.username ?? "");
@@ -167,6 +167,13 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
           await resetAccount();
         }
       }
+    ]);
+  };
+
+  const logoutUser = () => {
+    Alert.alert("Log out?", "You can log back in with your username and password.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: () => void logout() }
     ]);
   };
 
@@ -291,6 +298,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
 
       <Section title="Data">
         <AppButton title="Export workout data" icon={Download} variant="ghost" onPress={exportData} />
+        <AppButton title="Logout" icon={LogOut} variant="ghost" onPress={logoutUser} />
         <AppButton title="Clear all workout history" icon={Trash2} variant="danger" onPress={clearHistory} />
         <AppButton title="Reset app" icon={RotateCcw} variant="danger" onPress={resetApp} />
       </Section>

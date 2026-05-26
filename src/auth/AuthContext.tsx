@@ -14,6 +14,7 @@ type AuthContextValue = {
   usedUsernames: string[];
   loading: boolean;
   createAccount: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   resetApp: () => Promise<void>;
   updateUsername: (username: string) => Promise<{ ok: boolean; error?: string }>;
@@ -21,6 +22,8 @@ type AuthContextValue = {
 };
 
 export const ACCOUNT_KEY = "fithabit:account:v1";
+export const ACCOUNTS_KEY = "fithabit:accounts:v1";
+export const SESSION_KEY = "fithabit:session:v1";
 export const USED_USERNAMES_KEY = "fithabit:used-usernames:v1";
 const mockUsedUsernames = ["max", "alex", "fitking"];
 
@@ -42,21 +45,39 @@ function validateUsername(username: string, used: string[], current?: string) {
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<UserAccount | null>(null);
+  const [accounts, setAccounts] = useState<UserAccount[]>([]);
   const [usedUsernames, setUsedUsernames] = useState<string[]>(mockUsedUsernames);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void Promise.all([AsyncStorage.getItem(ACCOUNT_KEY), AsyncStorage.getItem(USED_USERNAMES_KEY)]).then(([storedUser, storedNames]) => {
-      if (storedNames) setUsedUsernames(Array.from(new Set([...mockUsedUsernames, ...(JSON.parse(storedNames) as string[])])));
-      if (storedUser) setUser(JSON.parse(storedUser) as UserAccount);
+    void Promise.all([AsyncStorage.getItem(ACCOUNT_KEY), AsyncStorage.getItem(ACCOUNTS_KEY), AsyncStorage.getItem(SESSION_KEY), AsyncStorage.getItem(USED_USERNAMES_KEY)]).then(([storedUser, storedAccounts, storedSession, storedNames]) => {
+      const legacyUser = storedUser ? (JSON.parse(storedUser) as UserAccount) : null;
+      const savedAccounts = storedAccounts ? (JSON.parse(storedAccounts) as UserAccount[]) : legacyUser ? [legacyUser] : [];
+      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacyUser?.id;
+      const sessionUser = savedAccounts.find((account) => account.id === sessionId) ?? null;
+      setAccounts(savedAccounts);
+      setUser(sessionUser);
+      const names = savedAccounts.map((account) => account.username);
+      if (storedNames) names.push(...(JSON.parse(storedNames) as string[]));
+      setUsedUsernames(Array.from(new Set([...mockUsedUsernames, ...names].map(normalizeUsername))));
       setLoading(false);
     });
   }, []);
 
-  const persistUser = useCallback(async (next: UserAccount | null) => {
+  const persistAccounts = useCallback(async (next: UserAccount[]) => {
+    setAccounts(next);
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next));
+  }, []);
+
+  const persistSession = useCallback(async (next: UserAccount | null) => {
     setUser(next);
-    if (next) await AsyncStorage.setItem(ACCOUNT_KEY, JSON.stringify(next));
-    else await AsyncStorage.removeItem(ACCOUNT_KEY);
+    if (next) {
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next.id));
+      await AsyncStorage.setItem(ACCOUNT_KEY, JSON.stringify(next));
+    } else {
+      await AsyncStorage.removeItem(SESSION_KEY);
+      await AsyncStorage.removeItem(ACCOUNT_KEY);
+    }
   }, []);
 
   const persistUsed = useCallback(async (names: string[]) => {
@@ -72,11 +93,24 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (!password) return { ok: false, error: "Password cannot be empty" };
       if (password.length < 6) return { ok: false, error: "Password must be at least 6 characters" };
       const next: UserAccount = { id: Date.now().toString(), username: username.trim(), password, createdAt: new Date().toISOString() };
-      await persistUser(next);
+      await persistAccounts([...accounts, next]);
+      await persistSession(next);
       await persistUsed([...usedUsernames, username]);
       return { ok: true };
     },
-    [persistUsed, persistUser, usedUsernames]
+    [accounts, persistAccounts, persistSession, persistUsed, usedUsernames]
+  );
+
+  const login = useCallback(
+    async (username: string, password: string) => {
+      const account = accounts.find((item) => normalizeUsername(item.username) === normalizeUsername(username));
+      if (!account || account.password !== password) {
+        return { ok: false, error: "Incorrect username or password" };
+      }
+      await persistSession(account);
+      return { ok: true };
+    },
+    [accounts, persistSession]
   );
 
   const updateUsername = useCallback(
@@ -85,31 +119,36 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const usernameError = validateUsername(username, usedUsernames, user.username);
       if (usernameError) return { ok: false, error: usernameError };
       const next = { ...user, username: username.trim() };
-      await persistUser(next);
+      await persistAccounts(accounts.map((account) => account.id === next.id ? next : account));
+      await persistSession(next);
       await persistUsed([...usedUsernames, username]);
       return { ok: true };
     },
-    [persistUsed, persistUser, usedUsernames, user]
+    [accounts, persistAccounts, persistSession, persistUsed, usedUsernames, user]
   );
 
   const updateProfilePhoto = useCallback(
     async (uri: string) => {
-      if (user) await persistUser({ ...user, profilePhoto: uri });
+      if (!user) return;
+      const next = { ...user, profilePhoto: uri };
+      await persistAccounts(accounts.map((account) => account.id === next.id ? next : account));
+      await persistSession(next);
     },
-    [persistUser, user]
+    [accounts, persistAccounts, persistSession, user]
   );
 
-  const logout = useCallback(async () => persistUser(null), [persistUser]);
+  const logout = useCallback(async () => persistSession(null), [persistSession]);
 
   const resetApp = useCallback(async () => {
     await AsyncStorage.clear();
     setUser(null);
+    setAccounts([]);
     setUsedUsernames(mockUsedUsernames);
   }, []);
 
   const value = useMemo(
-    () => ({ user, usedUsernames, loading, createAccount, logout, resetApp, updateUsername, updateProfilePhoto }),
-    [createAccount, loading, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames, user]
+    () => ({ user, usedUsernames, loading, createAccount, login, logout, resetApp, updateUsername, updateProfilePhoto }),
+    [createAccount, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames, user]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

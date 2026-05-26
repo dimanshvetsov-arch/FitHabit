@@ -8,6 +8,7 @@ import { useGoals } from "@/goals/GoalsContext";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { MainTabParamList, RootStackParamList } from "@/types";
 import { ActiveWorkoutScreen } from "@/screens/ActiveWorkoutScreen";
+import { AuthScreen } from "@/screens/AuthScreen";
 import { CalendarScreen } from "@/screens/CalendarScreen";
 import { CalendarDayDetailScreen } from "@/screens/CalendarDayDetailScreen";
 import { CreateAccountScreen } from "@/screens/CreateAccountScreen";
@@ -16,6 +17,7 @@ import { ExerciseDetailScreen } from "@/screens/ExerciseDetailScreen";
 import { GoalsSetupScreen } from "@/screens/GoalsSetupScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { LegalScreen } from "@/screens/LegalScreen";
+import { LoginScreen } from "@/screens/LoginScreen";
 import { ProfileEditScreen } from "@/screens/ProfileEditScreen";
 import { ProgressScreen } from "@/screens/ProgressScreen";
 import { RestTimerScreen } from "@/screens/RestTimerScreen";
@@ -73,7 +75,7 @@ export function RootNavigator() {
     return null;
   }
 
-  const initialRouteName = !user ? "CreateAccount" : !goals ? "GoalsSetup" : "MainTabs";
+  const initialRouteName = !user ? "Auth" : !goals ? "GoalsSetup" : "MainTabs";
 
   return (
     <Stack.Navigator
@@ -87,6 +89,8 @@ export function RootNavigator() {
         headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />
       })}
     >
+      <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Log In" }} />
       <Stack.Screen name="CreateAccount" component={CreateAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GoalsSetup" component={GoalsSetupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />

@@ -1,47 +1,44 @@
+import { LogIn } from "lucide-react-native";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/auth/AuthContext";
+import { useGoals } from "@/goals/GoalsContext";
 import { RootStackScreenProps } from "@/types";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
-export function CreateAccountScreen({ navigation }: RootStackScreenProps<"CreateAccount">) {
+export function LoginScreen({ navigation }: RootStackScreenProps<"Login">) {
   const { theme } = useThemeMode();
-  const { createAccount } = useAuth();
+  const { login } = useAuth();
+  const { goals } = useGoals();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
 
   const submit = async () => {
     setError("");
-    if (confirm !== password) {
-      setError("Confirm password must match password");
-      return;
-    }
-    const result = await createAccount(username, password);
+    const result = await login(username, password);
     if (!result.ok) {
-      setError(result.error ?? "Could not create account");
+      setError(result.error ?? "Incorrect username or password");
       return;
     }
-    navigation.replace("GoalsSetup");
+    navigation.replace(goals ? "MainTabs" : "GoalsSetup");
   };
 
   return (
     <AppScreen contentStyle={styles.content}>
       <View>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Create account</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.muted }]}>Set up your local FitHabit profile before entering the app.</Text>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Log in</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.muted }]}>Continue with your local FitHabit account.</Text>
       </View>
       <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <TextInput value={username} onChangeText={setUsername} placeholder="Username" placeholderTextColor={theme.colors.muted} style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border }]} />
         <PasswordInput value={password} onChangeText={setPassword} placeholder="Password" />
-        <PasswordInput value={confirm} onChangeText={setConfirm} placeholder="Confirm password" />
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
-      <AppButton title="Continue" onPress={submit} />
+      <AppButton title="Log In" icon={LogIn} onPress={submit} />
     </AppScreen>
   );
 }
