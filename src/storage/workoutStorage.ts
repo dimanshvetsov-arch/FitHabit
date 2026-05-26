@@ -1,8 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { exercises } from "@/data/mockData";
 import { WorkoutRecord } from "@/types";
 
 const WORKOUTS_KEY = "fithabit:workouts:v2";
 const REMINDERS_KEY = "fithabit:daily-reminders";
+const mainExerciseNames = new Set(exercises.map((exercise) => exercise.name));
+
+function isMainExerciseWorkout(workout: WorkoutRecord) {
+  return mainExerciseNames.has(workout.exerciseName);
+}
 
 export async function loadWorkouts(): Promise<WorkoutRecord[]> {
   const stored = await AsyncStorage.getItem(WORKOUTS_KEY);
@@ -10,7 +16,12 @@ export async function loadWorkouts(): Promise<WorkoutRecord[]> {
     await AsyncStorage.setItem(WORKOUTS_KEY, JSON.stringify([]));
     return [];
   }
-  return JSON.parse(stored) as WorkoutRecord[];
+  const storedWorkouts = JSON.parse(stored) as WorkoutRecord[];
+  const workouts = storedWorkouts.filter(isMainExerciseWorkout);
+  if (workouts.length !== storedWorkouts.length) {
+    await AsyncStorage.setItem(WORKOUTS_KEY, JSON.stringify(workouts));
+  }
+  return workouts;
 }
 
 export async function saveWorkout(record: WorkoutRecord) {
