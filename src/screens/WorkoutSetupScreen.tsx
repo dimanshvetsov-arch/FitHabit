@@ -1,11 +1,13 @@
 import { Minus, Plus, TimerReset } from "lucide-react-native";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { exercises } from "@/data/mockData";
 import { actionFeedback, playFeedbackSound } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
-import { RootStackScreenProps } from "@/types";
-import { useState } from "react";
+import { RootStackScreenProps, TrackingType, WorkoutSetup } from "@/types";
+import { formatDuration } from "@/utils/format";
 
 type StepperProps = {
   label: string;
@@ -14,9 +16,10 @@ type StepperProps = {
   onChange: (value: number) => void;
   min: number;
   step: number;
+  displayValue?: string;
 };
 
-function Stepper({ label, value, unit, onChange, min, step }: StepperProps) {
+function Stepper({ label, value, unit, onChange, min, step, displayValue }: StepperProps) {
   const { theme } = useThemeMode();
 
   return (
@@ -32,7 +35,7 @@ function Stepper({ label, value, unit, onChange, min, step }: StepperProps) {
         >
           <Minus color={theme.colors.text} size={18} />
         </Pressable>
-        <Text style={[styles.stepperValue, { color: theme.colors.text }]}>{value}{unit ?? ""}</Text>
+        <Text style={[styles.stepperValue, { color: theme.colors.text }]}>{displayValue ?? `${value}${unit ?? ""}`}</Text>
         <Pressable
           style={[styles.roundButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => {
@@ -47,24 +50,124 @@ function Stepper({ label, value, unit, onChange, min, step }: StepperProps) {
   );
 }
 
+function trackingCopy(type: TrackingType) {
+  switch (type) {
+    case "timer_only":
+      return "Choose hold duration, rest, and rounds. No reps needed.";
+    case "distance_time":
+      return "Set distance and goal time. FitHabit calculates the pace.";
+    case "reps_timer":
+      return "Choose timed rounds and an optional rep goal.";
+    default:
+      return "Choose reps, sets, rest time, and notes.";
+  }
+}
+
 export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"WorkoutSetup">) {
   const { theme } = useThemeMode();
+  const exercise = exercises.find((item) => item.id === route.params.exerciseId);
+  const trackingType = exercise?.trackingType ?? "reps_sets";
+  const exerciseName = route.params.variantName ?? route.params.exerciseName;
+
   const [reps, setReps] = useState(12);
   const [sets, setSets] = useState(4);
   const [restSeconds, setRestSeconds] = useState(60);
+  const [durationSeconds, setDurationSeconds] = useState(trackingType === "timer_only" ? 45 : 30);
+  const [rounds, setRounds] = useState(3);
+  const [distance, setDistance] = useState("3");
+  const [goalMinutes, setGoalMinutes] = useState("25");
+  const [repsGoal, setRepsGoal] = useState(60);
   const [notes, setNotes] = useState("");
-  const exerciseName = route.params.variantName ?? route.params.exerciseName;
+
+  const pace = useMemo(() => {
+    const distanceValue = Number(distance);
+    const minutesValue = Number(goalMinutes);
+    if (!distanceValue || !minutesValue) return "Set distance and time";
+    return `${(minutesValue / distanceValue).toFixed(1)} min/km`;
+  }, [distance, goalMinutes]);
+
+  const startWorkout = () => {
+    const distanceValue = Math.max(0, Number(distance) || 0);
+    const goalTimeSeconds = Math.max(60, (Number(goalMinutes) || 0) * 60);
+    const effectiveSets = trackingType === "reps_sets" ? sets : trackingType === "distance_time" ? 1 : rounds;
+    const effectiveReps = trackingType === "reps_sets" ? reps : trackingType === "reps_timer" ? repsGoal : 1;
+    const setup: WorkoutSetup = {
+      exerciseId: route.params.exerciseId,
+      exerciseName,
+      trackingType,
+      reps: effectiveReps,
+      sets: effectiveSets,
+      restSeconds,
+      notes,
+      durationSeconds,
+      rounds: effectiveSets,
+      distance: distanceValue,
+      goalTimeSeconds,
+      repsGoal: trackingType === "reps_timer" ? repsGoal : undefined
+    };
+
+    void actionFeedback("start");
+    navigation.navigate("ActiveWorkout", { setup });
+  };
 
   return (
     <AppScreen>
       <View>
         <Text style={[styles.title, { color: theme.colors.text }]}>{exerciseName}</Text>
-        <Text style={[styles.subtitle, { color: theme.colors.muted }]}>Set the target, keep the reps honest, and let FitHabit handle the rhythm.</Text>
+        <Text style={[styles.subtitle, { color: theme.colors.muted }]}>{trackingCopy(trackingType)}</Text>
       </View>
 
-      <Stepper label="Reps per set" value={reps} min={1} step={1} onChange={setReps} />
-      <Stepper label="Sets" value={sets} min={1} step={1} onChange={setSets} />
-      <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
+      <View style={[styles.typePill, { backgroundColor: `${theme.colors.primary}22`, borderColor: theme.colors.border }]}>
+        <Text style={[styles.typeText, { color: theme.colors.primary }]}>{trackingType.replace("_", " ").toUpperCase()}</Text>
+      </View>
+
+      {trackingType === "reps_sets" ? (
+        <>
+          <Stepper label="Reps per set" value={reps} min={1} step={1} onChange={setReps} />
+          <Stepper label="Sets" value={sets} min={1} step={1} onChange={setSets} />
+          <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
+        </>
+      ) : null}
+
+      {trackingType === "timer_only" ? (
+        <>
+          <Stepper label="Duration" value={durationSeconds} min={10} step={5} onChange={setDurationSeconds} displayValue={formatDuration(durationSeconds)} />
+          <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
+          <Stepper label="Rounds" value={rounds} min={1} step={1} onChange={setRounds} />
+        </>
+      ) : null}
+
+      {trackingType === "distance_time" ? (
+        <>
+          <View style={[styles.inputCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>Distance</Text>
+            <View style={styles.inlineInput}>
+              <TextInput value={distance} onChangeText={setDistance} keyboardType="decimal-pad" style={[styles.bigInput, { color: theme.colors.text }]} />
+              <Text style={[styles.inputUnit, { color: theme.colors.muted }]}>km</Text>
+            </View>
+          </View>
+          <View style={[styles.inputCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>Goal time</Text>
+            <View style={styles.inlineInput}>
+              <TextInput value={goalMinutes} onChangeText={setGoalMinutes} keyboardType="number-pad" style={[styles.bigInput, { color: theme.colors.text }]} />
+              <Text style={[styles.inputUnit, { color: theme.colors.muted }]}>min</Text>
+            </View>
+          </View>
+          <View style={[styles.paceCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+            <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>Pace</Text>
+            <Text style={[styles.paceValue, { color: theme.colors.green }]}>{pace}</Text>
+          </View>
+        </>
+      ) : null}
+
+      {trackingType === "reps_timer" ? (
+        <>
+          <Stepper label="Duration" value={durationSeconds} min={10} step={5} onChange={setDurationSeconds} displayValue={formatDuration(durationSeconds)} />
+          <Stepper label="Optional reps goal" value={repsGoal} min={0} step={5} onChange={setRepsGoal} />
+          <Stepper label="Rounds" value={rounds} min={1} step={1} onChange={setRounds} />
+          <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
+        </>
+      ) : null}
 
       <View style={[styles.notesCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>Notes</Text>
@@ -78,23 +181,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
         />
       </View>
 
-      <AppButton
-        title="Start Workout"
-        icon={TimerReset}
-        onPress={() => {
-          void actionFeedback("start");
-          navigation.navigate("ActiveWorkout", {
-            setup: {
-              exerciseId: route.params.exerciseId,
-              exerciseName,
-              reps,
-              sets,
-              restSeconds,
-              notes
-            }
-          });
-        }}
-      />
+      <AppButton title="Start Workout" icon={TimerReset} onPress={startWorkout} />
     </AppScreen>
   );
 }
@@ -110,6 +197,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 20
+  },
+  typePill: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  typeText: {
+    fontSize: 12,
+    fontWeight: "900"
   },
   stepper: {
     borderWidth: 1,
@@ -136,6 +234,40 @@ const styles = StyleSheet.create({
   },
   stepperValue: {
     fontSize: 34,
+    fontWeight: "900",
+    letterSpacing: 0
+  },
+  inputCard: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 18,
+    gap: 12
+  },
+  inlineInput: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 10
+  },
+  bigInput: {
+    minWidth: 100,
+    fontSize: 36,
+    fontWeight: "900",
+    letterSpacing: 0,
+    padding: 0
+  },
+  inputUnit: {
+    paddingBottom: 6,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  paceCard: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 18,
+    gap: 8
+  },
+  paceValue: {
+    fontSize: 30,
     fontWeight: "900",
     letterSpacing: 0
   },

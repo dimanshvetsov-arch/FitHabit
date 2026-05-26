@@ -17,6 +17,9 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   const [completedReps] = useState(route.params.initialCompletedReps ?? 0);
   const [paused, setPaused] = useState(false);
   const targetReps = setup.reps * setup.sets;
+  const isRepBased = setup.trackingType === "reps_sets" || setup.trackingType === "reps_timer";
+  const roundLabel = setup.trackingType === "reps_sets" ? "Set" : "Round";
+  const primaryTimer = setup.trackingType === "distance_time" ? setup.goalTimeSeconds ?? 0 : setup.durationSeconds ?? 0;
 
   useEffect(() => {
     if (paused) return;
@@ -25,6 +28,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   }, [paused]);
 
   const progressText = useMemo(() => `${completedReps + reps}/${targetReps} reps`, [completedReps, reps, targetReps]);
+  const timerRemaining = primaryTimer > 0 ? Math.max(0, primaryTimer - elapsedSeconds) : 0;
 
   const addRep = () => {
     void Haptics.selectionAsync();
@@ -56,10 +60,10 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
       id: Date.now().toString(),
       exerciseName: setup.exerciseName,
       completedAt: new Date().toISOString(),
-      totalReps,
+      totalReps: setup.trackingType === "distance_time" || setup.trackingType === "timer_only" ? 0 : totalReps,
       totalSets,
       durationSeconds: elapsedSeconds,
-      calories: Math.max(24, Math.round(totalReps * 0.7 + elapsedSeconds / 50))
+      calories: Math.max(24, Math.round(totalReps * 0.7 + elapsedSeconds / 50 + (setup.distance ?? 0) * 55))
     };
     navigation.replace("WorkoutSummary", { record });
   };
@@ -83,14 +87,28 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
             </Pressable>
           </View>
           <Text style={styles.title}>{setup.exerciseName}</Text>
-          <Text style={styles.timer}>{formatDuration(elapsedSeconds)}</Text>
+          <Text style={styles.timer}>{primaryTimer > 0 ? formatDuration(timerRemaining) : formatDuration(elapsedSeconds)}</Text>
         </View>
 
         <View style={styles.centerCard}>
-          <Text style={styles.set}>Set {currentSet} of {setup.sets}</Text>
-          <Text style={styles.repCount}>{reps}</Text>
-          <Text style={styles.target}>Target {setup.reps} reps - {progressText}</Text>
-          <AppButton title="+1 Rep" icon={Plus} onPress={addRep} />
+          <Text style={styles.set}>{roundLabel} {currentSet} of {setup.sets}</Text>
+          {setup.trackingType === "distance_time" ? (
+            <>
+              <Text style={styles.repCount}>{setup.distance ?? 0}</Text>
+              <Text style={styles.target}>km goal - {formatDuration(elapsedSeconds)} elapsed</Text>
+            </>
+          ) : isRepBased ? (
+            <>
+              <Text style={styles.repCount}>{reps}</Text>
+              <Text style={styles.target}>{setup.trackingType === "reps_timer" ? `${formatDuration(setup.durationSeconds ?? 0)} round` : `Target ${setup.reps} reps`} - {progressText}</Text>
+              <AppButton title="+1 Rep" icon={Plus} onPress={addRep} />
+            </>
+          ) : (
+            <>
+              <Text style={styles.repCount}>{formatDuration(timerRemaining)}</Text>
+              <Text style={styles.target}>{formatDuration(elapsedSeconds)} elapsed - hold steady</Text>
+            </>
+          )}
         </View>
 
         <View style={styles.actions}>
