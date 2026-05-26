@@ -186,7 +186,7 @@ export const exercises: Exercise[] = [
     id: "mountain-climbers",
     name: "Mountain Climbers",
     category: "Cardio",
-    image: "https://images.unsplash.com/photo-1598971639058-a67f5f7b1f4f?auto=format&fit=crop&w=1200&q=85",
+    image: "https://www.shutterstock.com/image-photo/girl-climbs-rock-climber-climbing-600nw-2504714167.jpg",
     description: "Timed cardio with an optional rep goal.",
     accent: "#EF4444",
     difficulty: "Medium",
