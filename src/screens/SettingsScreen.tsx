@@ -142,7 +142,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
     }
   };
 
-  const exportData = async () => {
+  const shareExportData = async () => {
     await Share.share({
       message: exportAllData({
         account: user,
@@ -154,8 +154,15 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
     });
   };
 
+  const exportData = () => {
+    Alert.alert("Export workout data?", "Are you sure you want to export your account, settings, goals, workout history, streak, exercise stats, and progress data as JSON?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Export", onPress: () => void shareExportData() }
+    ]);
+  };
+
   const clearHistory = () => {
-    Alert.alert("Clear workout history?", "This removes completed workouts from this device.", [
+    Alert.alert("Clear workout history?", "Are you sure you want to delete all completed workouts, streak progress, calendar days, total minutes, and exercise counters? Your account, profile photo, goals, and settings will stay saved.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Clear",
@@ -169,7 +176,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   };
 
   const resetApp = () => {
-    Alert.alert("Reset app?", "This clears your account, settings, goals, workouts, streak, and exercise counters.", [
+    Alert.alert("Reset app?", "Are you sure you want to delete everything? This clears your account, profile photo, settings, goals, workouts, streak, and exercise counters.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Reset",
@@ -185,7 +192,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   };
 
   const logoutUser = () => {
-    Alert.alert("Log out?", "You can log back in with your username and password.", [
+    Alert.alert("Log out?", "Are you sure you want to log out? Your account, workout history, and settings will stay saved.", [
       { text: "Cancel", style: "cancel" },
       { text: "Log out", style: "destructive", onPress: () => void logout() }
     ]);
