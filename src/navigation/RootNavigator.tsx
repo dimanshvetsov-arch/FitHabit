@@ -75,7 +75,27 @@ export function RootNavigator() {
     return null;
   }
 
-  const initialRouteName = !user ? "Auth" : !goals ? "GoalsSetup" : "MainTabs";
+  if (!user) {
+    return (
+      <Stack.Navigator
+        key="auth"
+        initialRouteName="Auth"
+        screenOptions={({ navigation }) => ({
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: { fontWeight: "900" },
+          contentStyle: { backgroundColor: theme.colors.background },
+          headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />
+        })}
+      >
+        <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Log In" }} />
+        <Stack.Screen name="CreateAccount" component={CreateAccountScreen} options={{ headerShown: false }} />
+      </Stack.Navigator>
+    );
+  }
+
+  const initialRouteName = !goals ? "GoalsSetup" : "MainTabs";
 
   return (
     <Stack.Navigator
@@ -89,8 +109,6 @@ export function RootNavigator() {
         headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />
       })}
     >
-      <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Login" component={LoginScreen} options={{ title: "Log In" }} />
       <Stack.Screen name="CreateAccount" component={CreateAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GoalsSetup" component={GoalsSetupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
