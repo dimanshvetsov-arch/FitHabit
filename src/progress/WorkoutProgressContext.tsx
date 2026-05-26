@@ -44,6 +44,18 @@ type WorkoutProgressContextValue = {
   addWorkout: (record: WorkoutRecord) => Promise<void>;
   completeWorkout: (record: WorkoutRecord) => Promise<void>;
   resetWorkouts: () => Promise<void>;
+  clearWorkoutHistory: () => Promise<void>;
+  resetProgress: () => Promise<void>;
+  exportProgressData: () => {
+    completedWorkouts: WorkoutRecord[];
+    completedWorkoutDates: string[];
+    currentStreak: number;
+    lastWorkoutDate?: string;
+    totalMinutesTrained: number;
+    weeklyProgress: WeeklyProgress;
+    exerciseStats: Record<string, ExerciseStat>;
+    stats: WorkoutStats;
+  };
 };
 
 const Context = createContext<WorkoutProgressContextValue | null>(null);
@@ -199,7 +211,19 @@ export function WorkoutProgressProvider({ children }: PropsWithChildren) {
       refresh,
       addWorkout,
       completeWorkout: addWorkout,
-      resetWorkouts
+      resetWorkouts,
+      clearWorkoutHistory: resetWorkouts,
+      resetProgress: resetWorkouts,
+      exportProgressData: () => ({
+        completedWorkouts,
+        completedWorkoutDates: calendarCompletedDays,
+        currentStreak,
+        lastWorkoutDate,
+        totalMinutesTrained,
+        weeklyProgress,
+        exerciseStats,
+        stats
+      })
     }),
     [addWorkout, calendarCompletedDays, completedWorkouts, currentStreak, exerciseStats, lastWorkoutDate, loading, refresh, resetWorkouts, stats, totalMinutesTrained, weeklyProgress]
   );

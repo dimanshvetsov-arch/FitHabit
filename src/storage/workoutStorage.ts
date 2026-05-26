@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { exercises } from "@/data/mockData";
+import { legacyStorageKeys, storageKeys } from "@/storage/keys";
 import { WorkoutRecord } from "@/types";
 
-const WORKOUTS_KEY = "fithabit:workouts:v2";
+export const WORKOUTS_KEY = storageKeys.workoutHistory;
 const REMINDERS_KEY = "fithabit:daily-reminders";
 const mainExerciseNames = new Set(exercises.map((exercise) => exercise.name));
 
@@ -12,13 +13,15 @@ function isMainExerciseWorkout(workout: WorkoutRecord) {
 
 export async function loadWorkouts(): Promise<WorkoutRecord[]> {
   const stored = await AsyncStorage.getItem(WORKOUTS_KEY);
-  if (!stored) {
+  const legacy = stored ? null : await AsyncStorage.getItem(legacyStorageKeys.workoutHistory);
+  const source = stored ?? legacy;
+  if (!source) {
     await AsyncStorage.setItem(WORKOUTS_KEY, JSON.stringify([]));
     return [];
   }
-  const storedWorkouts = JSON.parse(stored) as WorkoutRecord[];
+  const storedWorkouts = JSON.parse(source) as WorkoutRecord[];
   const workouts = storedWorkouts.filter(isMainExerciseWorkout);
-  if (workouts.length !== storedWorkouts.length) {
+  if (!stored || workouts.length !== storedWorkouts.length) {
     await AsyncStorage.setItem(WORKOUTS_KEY, JSON.stringify(workouts));
   }
   return workouts;
@@ -41,5 +44,5 @@ export async function getDailyReminders() {
 }
 
 export async function clearWorkoutData() {
-  await AsyncStorage.multiRemove([WORKOUTS_KEY, "fithabit:workouts"]);
+  await AsyncStorage.multiRemove([WORKOUTS_KEY, storageKeys.progress, storageKeys.exerciseStats, legacyStorageKeys.workoutHistory, legacyStorageKeys.oldWorkoutHistory]);
 }

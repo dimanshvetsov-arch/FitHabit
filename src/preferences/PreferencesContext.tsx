@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { legacyStorageKeys, storageKeys } from "@/storage/keys";
 
 export type FitnessLevel = "Beginner" | "Intermediate" | "Advanced";
 export type AccentColor = "Purple" | "Blue" | "Green" | "Orange" | "Red";
@@ -31,7 +32,7 @@ export type Preferences = {
   timeFormat: TimeFormat;
 };
 
-export const PREFERENCES_KEY = "fithabit:preferences:v1";
+export const PREFERENCES_KEY = storageKeys.settings;
 
 export const defaultPreferences: Preferences = {
   userName: "New account",
@@ -71,9 +72,12 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    void AsyncStorage.getItem(PREFERENCES_KEY).then((stored) => {
-      if (stored) {
-        setPreferences({ ...defaultPreferences, ...(JSON.parse(stored) as Partial<Preferences>) });
+    void Promise.all([AsyncStorage.getItem(PREFERENCES_KEY), AsyncStorage.getItem(legacyStorageKeys.settings)]).then(async ([stored, legacy]) => {
+      const source = stored ?? legacy;
+      if (source) {
+        const next = { ...defaultPreferences, ...(JSON.parse(source) as Partial<Preferences>) };
+        setPreferences(next);
+        if (!stored) await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(next));
       }
       setLoaded(true);
     });

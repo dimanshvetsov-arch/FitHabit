@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { legacyStorageKeys, storageKeys } from "@/storage/keys";
 
 export type UserAccount = {
   id: string;
@@ -11,6 +12,7 @@ export type UserAccount = {
 
 type AuthContextValue = {
   user: UserAccount | null;
+  currentUser: UserAccount | null;
   usedUsernames: string[];
   loading: boolean;
   createAccount: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -21,10 +23,10 @@ type AuthContextValue = {
   updateProfilePhoto: (uri: string) => Promise<void>;
 };
 
-export const ACCOUNT_KEY = "fithabit:account:v1";
-export const ACCOUNTS_KEY = "fithabit:accounts:v1";
-export const SESSION_KEY = "fithabit:session:v1";
-export const USED_USERNAMES_KEY = "fithabit:used-usernames:v1";
+export const ACCOUNT_KEY = legacyStorageKeys.account;
+export const ACCOUNTS_KEY = storageKeys.auth;
+export const SESSION_KEY = storageKeys.currentUser;
+export const USED_USERNAMES_KEY = `${storageKeys.auth}:usedUsernames`;
 const mockUsedUsernames = ["max", "alex", "fitking"];
 
 const Context = createContext<AuthContextValue | null>(null);
@@ -50,16 +52,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void Promise.all([AsyncStorage.getItem(ACCOUNT_KEY), AsyncStorage.getItem(ACCOUNTS_KEY), AsyncStorage.getItem(SESSION_KEY), AsyncStorage.getItem(USED_USERNAMES_KEY)]).then(([storedUser, storedAccounts, storedSession, storedNames]) => {
+    void Promise.all([
+      AsyncStorage.getItem(ACCOUNT_KEY),
+      AsyncStorage.getItem(ACCOUNTS_KEY),
+      AsyncStorage.getItem(legacyStorageKeys.accounts),
+      AsyncStorage.getItem(SESSION_KEY),
+      AsyncStorage.getItem(legacyStorageKeys.currentUser),
+      AsyncStorage.getItem(USED_USERNAMES_KEY),
+      AsyncStorage.getItem(legacyStorageKeys.usedUsernames)
+    ]).then(async ([storedUser, storedAccounts, legacyAccounts, storedSession, legacySession, storedNames, legacyNames]) => {
       const legacyUser = storedUser ? (JSON.parse(storedUser) as UserAccount) : null;
-      const savedAccounts = storedAccounts ? (JSON.parse(storedAccounts) as UserAccount[]) : legacyUser ? [legacyUser] : [];
-      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacyUser?.id;
+      const savedAccounts = storedAccounts ? (JSON.parse(storedAccounts) as UserAccount[]) : legacyAccounts ? (JSON.parse(legacyAccounts) as UserAccount[]) : legacyUser ? [legacyUser] : [];
+      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacySession ? (JSON.parse(legacySession) as string) : legacyUser?.id;
       const sessionUser = savedAccounts.find((account) => account.id === sessionId) ?? null;
       setAccounts(savedAccounts);
       setUser(sessionUser);
       const names = savedAccounts.map((account) => account.username);
       if (storedNames) names.push(...(JSON.parse(storedNames) as string[]));
+      if (legacyNames) names.push(...(JSON.parse(legacyNames) as string[]));
       setUsedUsernames(Array.from(new Set([...mockUsedUsernames, ...names].map(normalizeUsername))));
+      if (!storedAccounts && savedAccounts.length) await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(savedAccounts));
+      if (!storedSession && sessionUser) await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser.id));
       setLoading(false);
     });
   }, []);
@@ -73,10 +86,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(next);
     if (next) {
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next.id));
-      await AsyncStorage.setItem(ACCOUNT_KEY, JSON.stringify(next));
     } else {
       await AsyncStorage.removeItem(SESSION_KEY);
-      await AsyncStorage.removeItem(ACCOUNT_KEY);
     }
   }, []);
 
@@ -147,7 +158,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, usedUsernames, loading, createAccount, login, logout, resetApp, updateUsername, updateProfilePhoto }),
+    () => ({ user, currentUser: user, usedUsernames, loading, createAccount, login, logout, resetApp, updateUsername, updateProfilePhoto }),
     [createAccount, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames, user]
   );
 

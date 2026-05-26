@@ -10,7 +10,7 @@ import { MainGoal, useGoals } from "@/goals/GoalsContext";
 import { accentColors } from "@/theme/colors";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { AccentColor, FitnessLevel, usePreferences } from "@/preferences/PreferencesContext";
-import { loadWorkouts } from "@/storage/workoutStorage";
+import { clearWorkoutHistory as clearWorkoutHistoryData, exportAllData, resetEntireApp } from "@/services/dataService";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
 const levels: FitnessLevel[] = ["Beginner", "Intermediate", "Advanced"];
@@ -59,10 +59,10 @@ function NumberInput({ value, onChange, suffix }: { value: number; onChange: (va
 
 export function SettingsScreen({ navigation }: { navigation: { navigate: (screen: string) => void } }) {
   const { theme, toggleScheme } = useThemeMode();
-  const { preferences, updatePreference, resetPreferences } = usePreferences();
+  const { preferences, updatePreference } = usePreferences();
   const { user, updateUsername, updateProfilePhoto, logout, resetApp: resetAccount } = useAuth();
   const { goals: userGoals, updateGoals, clearGoals } = useGoals();
-  const { resetWorkouts } = useWorkouts();
+  const { clearWorkoutHistory, exportProgressData, workoutHistory } = useWorkouts();
   const [username, setUsername] = useState(user?.username ?? "");
   const [usernameError, setUsernameError] = useState("");
 
@@ -143,14 +143,28 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   };
 
   const exportData = async () => {
-    const workouts = await loadWorkouts();
-    await Share.share({ message: JSON.stringify({ account: user, goals: userGoals, preferences, workouts }, null, 2) });
+    await Share.share({
+      message: exportAllData({
+        account: user,
+        goals: userGoals,
+        settings: preferences,
+        workoutHistory,
+        progress: exportProgressData()
+      })
+    });
   };
 
   const clearHistory = () => {
     Alert.alert("Clear workout history?", "This removes completed workouts from this device.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Clear", style: "destructive", onPress: () => void resetWorkouts() }
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: async () => {
+          await clearWorkoutHistoryData();
+          await clearWorkoutHistory();
+        }
+      }
     ]);
   };
 
@@ -161,9 +175,9 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
         text: "Reset",
         style: "destructive",
         onPress: async () => {
-          await resetWorkouts();
-          await resetPreferences();
+          await resetEntireApp();
           await clearGoals();
+          await clearWorkoutHistory();
           await resetAccount();
         }
       }

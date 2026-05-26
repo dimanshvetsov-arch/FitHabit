@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { FitnessLevel } from "@/preferences/PreferencesContext";
+import { legacyStorageKeys, storageKeys } from "@/storage/keys";
 
 export type MainGoal = "Build muscle" | "Lose weight" | "Improve endurance" | "Build discipline" | "Stay healthy";
 
@@ -18,7 +19,7 @@ type GoalsContextValue = {
   clearGoals: () => Promise<void>;
 };
 
-export const GOALS_KEY = "fithabit:goals:v1";
+export const GOALS_KEY = storageKeys.goals;
 
 const Context = createContext<GoalsContextValue | null>(null);
 
@@ -27,8 +28,13 @@ export function GoalsProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    void AsyncStorage.getItem(GOALS_KEY).then((stored) => {
-      if (stored) setGoals(JSON.parse(stored) as UserGoals);
+    void Promise.all([AsyncStorage.getItem(GOALS_KEY), AsyncStorage.getItem(legacyStorageKeys.goals)]).then(async ([stored, legacy]) => {
+      const source = stored ?? legacy;
+      if (source) {
+        const next = JSON.parse(source) as UserGoals;
+        setGoals(next);
+        if (!stored) await AsyncStorage.setItem(GOALS_KEY, JSON.stringify(next));
+      }
       setLoading(false);
     });
   }, []);
