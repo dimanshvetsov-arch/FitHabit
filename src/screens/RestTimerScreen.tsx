@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { ProgressRing } from "@/components/ProgressRing";
+import { playFeedbackSound, speakFeedback } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackScreenProps } from "@/types";
 
@@ -16,6 +17,8 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
   useEffect(() => {
     if (remaining <= 0) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void playFeedbackSound("success");
+      void speakFeedback("Rest complete. Next set.");
       navigation.replace("ActiveWorkout", {
         setup,
         initialSet: completedSets + 1,
@@ -23,6 +26,12 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
         initialElapsedSeconds: elapsedSeconds + setup.restSeconds
       });
       return;
+    }
+    if (remaining <= 3) {
+      void playFeedbackSound("tick");
+      void speakFeedback(String(remaining));
+    } else if (remaining === setup.restSeconds) {
+      void speakFeedback(`Rest for ${setup.restSeconds} seconds.`);
     }
     const timeout = setTimeout(() => setRemaining((value) => value - 1), 1000);
     return () => clearTimeout(timeout);

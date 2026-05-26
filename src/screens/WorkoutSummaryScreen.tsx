@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { MetricCard } from "@/components/MetricCard";
+import { actionFeedback } from "@/services/feedback";
 import { saveWorkout } from "@/storage/workoutStorage";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackParamList, RootStackScreenProps } from "@/types";
@@ -18,6 +19,7 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
 
   useEffect(() => {
     void saveWorkout(record);
+    void actionFeedback("success", `Workout saved. ${record.totalReps} total reps.`);
   }, [record]);
 
   return (

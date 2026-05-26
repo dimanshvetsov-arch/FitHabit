@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { images } from "@/data/images";
+import { actionFeedback, playFeedbackSound, speakFeedback } from "@/services/feedback";
 import { RootStackScreenProps, WorkoutRecord } from "@/types";
 import { formatDuration } from "@/utils/format";
 
@@ -23,19 +24,29 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
     return () => clearInterval(interval);
   }, [paused]);
 
+  useEffect(() => {
+    void speakFeedback(`${setup.exerciseName}. Set ${currentSet} of ${setup.sets}.`);
+  }, [currentSet, setup.exerciseName, setup.sets]);
+
   const progressText = useMemo(() => `${completedReps + reps}/${targetReps} reps`, [completedReps, reps, targetReps]);
 
   const addRep = () => {
     void Haptics.selectionAsync();
+    void playFeedbackSound("tap");
+    if (reps + 1 === setup.reps) {
+      void speakFeedback("Target reached.");
+    }
     setReps((value) => Math.min(setup.reps, value + 1));
   };
 
   const finishSet = () => {
     const nextCompletedReps = completedReps + reps;
     if (currentSet >= setup.sets) {
+      void actionFeedback("success", "Workout complete. Great work.");
       finishWorkout(nextCompletedReps, setup.sets);
       return;
     }
+    void actionFeedback("success", "Set complete. Rest timer started.");
     navigation.navigate("RestTimer", {
       setup,
       completedSets: currentSet,
@@ -58,6 +69,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   };
 
   const leaveWorkout = () => {
+    void actionFeedback("warning", "Workout paused. Leave session?");
     Alert.alert("Leave workout?", "This active session will not be saved.", [
       { text: "Stay", style: "cancel" },
       { text: "Leave", style: "destructive", onPress: () => navigation.navigate("MainTabs") }
@@ -86,7 +98,17 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
         </View>
 
         <View style={styles.actions}>
-          <AppButton title={paused ? "Resume" : "Pause"} icon={Pause} variant="ghost" onPress={() => setPaused((value) => !value)} style={styles.actionButton} />
+          <AppButton
+            title={paused ? "Resume" : "Pause"}
+            icon={Pause}
+            variant="ghost"
+            onPress={() => {
+              const next = !paused;
+              setPaused(next);
+              void speakFeedback(next ? "Workout paused." : "Resuming workout.");
+            }}
+            style={styles.actionButton}
+          />
           <AppButton title={currentSet >= setup.sets ? "Finish" : "Finish Set"} icon={SquareCheckBig} variant="success" onPress={finishSet} style={styles.actionButton} />
         </View>
       </LinearGradient>

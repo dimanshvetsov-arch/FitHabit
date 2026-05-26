@@ -1,10 +1,11 @@
 import * as Notifications from "expo-notifications";
-import { Bell, Flame, Moon, RotateCcw, Star, Sun, Trophy, User } from "lucide-react-native";
+import { Bell, Flame, Moon, RotateCcw, Star, Sun, Trophy, User, Volume2, VolumeX } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { MetricCard } from "@/components/MetricCard";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { actionFeedback, loadFeedbackSettings, saveFeedbackSettings, speakFeedback } from "@/services/feedback";
 import { getDailyReminders, setDailyReminders } from "@/storage/workoutStorage";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
@@ -12,13 +13,20 @@ export function ProfileScreen() {
   const { theme, scheme, toggleScheme } = useThemeMode();
   const { stats, resetWorkouts } = useWorkouts();
   const [reminders, setReminders] = useState(false);
+  const [sounds, setSounds] = useState(true);
+  const [voice, setVoice] = useState(true);
   const isNew = stats.totalWorkouts === 0;
 
   useEffect(() => {
     void getDailyReminders().then(setReminders);
+    void loadFeedbackSettings().then((settings) => {
+      setSounds(settings.sounds);
+      setVoice(settings.voice);
+    });
   }, []);
 
   const toggleReminders = async (enabled: boolean) => {
+    void actionFeedback("tap", enabled ? "Daily reminders on." : "Daily reminders off.");
     setReminders(enabled);
     await setDailyReminders(enabled);
     if (enabled) {
@@ -38,6 +46,22 @@ export function ProfileScreen() {
     }
   };
 
+  const toggleSounds = async (enabled: boolean) => {
+    setSounds(enabled);
+    await saveFeedbackSettings({ sounds: enabled, voice });
+    if (enabled) {
+      void actionFeedback("success", "Sound effects on.");
+    }
+  };
+
+  const toggleVoice = async (enabled: boolean) => {
+    setVoice(enabled);
+    await saveFeedbackSettings({ sounds, voice: enabled });
+    if (enabled) {
+      void speakFeedback("Voice coach on.");
+    }
+  };
+
   const confirmReset = () => {
     Alert.alert("Reset training data?", "This clears workouts, streaks, reminders, and achievements on this device.", [
       { text: "Cancel", style: "cancel" },
@@ -48,6 +72,8 @@ export function ProfileScreen() {
           await Notifications.cancelAllScheduledNotificationsAsync();
           await resetWorkouts();
           setReminders(false);
+          setSounds(true);
+          setVoice(true);
         }
       }
     ]);
@@ -85,6 +111,28 @@ export function ProfileScreen() {
           <Text style={[styles.settingMeta, { color: theme.colors.muted }]}>6:00 PM every day</Text>
         </View>
         <Switch value={reminders} onValueChange={toggleReminders} thumbColor="#fff" trackColor={{ false: theme.colors.cardSoft, true: theme.colors.primary }} />
+      </View>
+
+      <View style={[styles.setting, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={[styles.iconBox, { backgroundColor: `${theme.colors.green}22` }]}>
+          {sounds ? <Volume2 color={theme.colors.green} size={20} /> : <VolumeX color={theme.colors.muted} size={20} />}
+        </View>
+        <View style={styles.settingText}>
+          <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Sound effects</Text>
+          <Text style={[styles.settingMeta, { color: theme.colors.muted }]}>Clicks, timers, workout cues</Text>
+        </View>
+        <Switch value={sounds} onValueChange={toggleSounds} thumbColor="#fff" trackColor={{ false: theme.colors.cardSoft, true: theme.colors.green }} />
+      </View>
+
+      <View style={[styles.setting, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={[styles.iconBox, { backgroundColor: `${theme.colors.orange}22` }]}>
+          <Volume2 color={theme.colors.orange} size={20} />
+        </View>
+        <View style={styles.settingText}>
+          <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Voice coach</Text>
+          <Text style={[styles.settingMeta, { color: theme.colors.muted }]}>Spoken starts, rests, reps, and finishes</Text>
+        </View>
+        <Switch value={voice} onValueChange={toggleVoice} thumbColor="#fff" trackColor={{ false: theme.colors.cardSoft, true: theme.colors.orange }} />
       </View>
 
       <Pressable onPress={toggleScheme} style={[styles.setting, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>

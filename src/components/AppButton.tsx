@@ -1,7 +1,7 @@
-import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, ViewStyle } from "react-native";
+import { tapFeedback } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
 type Props = {
@@ -20,7 +20,7 @@ export function AppButton({ title, onPress, icon: Icon, variant = "primary", sty
   return (
     <Pressable
       onPress={() => {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        void tapFeedback();
         onPress();
       }}
       style={({ pressed }) => [styles.pressable, pressed && styles.pressed, style]}

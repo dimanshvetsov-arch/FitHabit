@@ -2,6 +2,7 @@ import { Minus, Plus, TimerReset } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { actionFeedback, playFeedbackSound } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackScreenProps } from "@/types";
 import { useState } from "react";
@@ -22,11 +23,23 @@ function Stepper({ label, value, unit, onChange, min, step }: StepperProps) {
     <View style={[styles.stepper, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
       <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>{label}</Text>
       <View style={styles.stepperControls}>
-        <Pressable style={[styles.roundButton, { backgroundColor: theme.colors.cardSoft }]} onPress={() => onChange(Math.max(min, value - step))}>
+        <Pressable
+          style={[styles.roundButton, { backgroundColor: theme.colors.cardSoft }]}
+          onPress={() => {
+            void playFeedbackSound("tap");
+            onChange(Math.max(min, value - step));
+          }}
+        >
           <Minus color={theme.colors.text} size={18} />
         </Pressable>
         <Text style={[styles.stepperValue, { color: theme.colors.text }]}>{value}{unit ?? ""}</Text>
-        <Pressable style={[styles.roundButton, { backgroundColor: theme.colors.primary }]} onPress={() => onChange(value + step)}>
+        <Pressable
+          style={[styles.roundButton, { backgroundColor: theme.colors.primary }]}
+          onPress={() => {
+            void playFeedbackSound("tap");
+            onChange(value + step);
+          }}
+        >
           <Plus color="#fff" size={18} />
         </Pressable>
       </View>
@@ -68,7 +81,8 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
       <AppButton
         title="Start Workout"
         icon={TimerReset}
-        onPress={() =>
+        onPress={() => {
+          void actionFeedback("start", `Starting ${exerciseName}. ${sets} sets. ${reps} reps.`);
           navigation.navigate("ActiveWorkout", {
             setup: {
               exerciseId: route.params.exerciseId,
@@ -78,8 +92,8 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
               restSeconds,
               notes
             }
-          })
-        }
+          });
+        }}
       />
     </AppScreen>
   );
