@@ -1,11 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
-import * as Haptics from "expo-haptics";
 import { Pause, Plus, SquareCheckBig, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
+import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { images } from "@/data/images";
-import { actionFeedback, playFeedbackSound } from "@/services/feedback";
+import { actionFeedback, playFeedbackSound, tapFeedback } from "@/services/feedback";
 import { RootStackScreenProps, WorkoutRecord } from "@/types";
 import { formatDuration } from "@/utils/format";
 
@@ -31,8 +31,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   const timerRemaining = primaryTimer > 0 ? Math.max(0, primaryTimer - elapsedSeconds) : 0;
 
   const addRep = () => {
-    void Haptics.selectionAsync();
-    void playFeedbackSound("tap");
+    void tapFeedback();
     if (reps + 1 === setup.reps) {
       void playFeedbackSound("success");
     }
@@ -81,6 +80,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
       <LinearGradient colors={["rgba(13,17,23,0.64)", "rgba(13,17,23,0.96)"]} style={styles.overlay}>
         <View style={styles.top}>
           <View style={styles.topBar}>
+            <HeaderBackButton onPress={() => navigation.goBack()} />
             <Text style={styles.kicker}>Active workout</Text>
             <Pressable onPress={leaveWorkout} style={styles.closeButton}>
               <X color="#fff" size={22} />

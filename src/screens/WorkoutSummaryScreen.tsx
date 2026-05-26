@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { MetricCard } from "@/components/MetricCard";
 import { actionFeedback } from "@/services/feedback";
 import { saveWorkout } from "@/storage/workoutStorage";
@@ -24,6 +25,9 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
 
   return (
     <AppScreen contentStyle={styles.content}>
+      <View style={styles.backWrap}>
+        <HeaderBackButton onPress={() => navigation.goBack()} />
+      </View>
       <View style={[styles.achievement, { backgroundColor: `${theme.colors.primary}22`, borderColor: theme.colors.primary }]}>
         <Award color={theme.colors.orange} size={52} />
         <Text style={[styles.title, { color: theme.colors.text }]}>Workout complete</Text>
@@ -48,6 +52,11 @@ const styles = StyleSheet.create({
   content: {
     justifyContent: "center",
     minHeight: "100%"
+  },
+  backWrap: {
+    position: "absolute",
+    top: 18,
+    left: 20
   },
   achievement: {
     borderWidth: 1,

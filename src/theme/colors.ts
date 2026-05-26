@@ -25,3 +25,11 @@ export const lightPalette = {
   border: "rgba(17,24,39,0.08)",
   blackOverlay: "rgba(0,0,0,0.35)"
 };
+
+export const accentColors = {
+  Purple: "#8B5CF6",
+  Blue: "#3B82F6",
+  Green: "#22C55E",
+  Orange: "#F59E0B",
+  Red: "#EF4444"
+};

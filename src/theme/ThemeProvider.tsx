@@ -1,7 +1,8 @@
 import { DarkTheme, DefaultTheme, type Theme } from "@react-navigation/native";
-import { createContext, PropsWithChildren, useContext, useMemo, useState } from "react";
-import { ColorSchemeName, useColorScheme } from "react-native";
-import { lightPalette, palette } from "./colors";
+import { createContext, PropsWithChildren, useContext, useMemo } from "react";
+import { ColorSchemeName } from "react-native";
+import { usePreferences } from "@/preferences/PreferencesContext";
+import { accentColors, lightPalette, palette } from "./colors";
 
 type AppTheme = {
   colors: typeof palette;
@@ -17,10 +18,13 @@ type ThemeModeContext = {
 const Context = createContext<ThemeModeContext | null>(null);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
-  const systemScheme = useColorScheme() ?? "dark";
-  const [manualScheme, setManualScheme] = useState<NonNullable<ColorSchemeName> | null>(null);
-  const scheme = manualScheme ?? systemScheme;
-  const colors = scheme === "dark" ? palette : lightPalette;
+  const { preferences, updatePreference } = usePreferences();
+  const scheme = preferences.themeMode;
+  const colors = {
+    ...(scheme === "dark" ? palette : lightPalette),
+    primary: accentColors[preferences.accentColor],
+    secondary: accentColors[preferences.accentColor]
+  };
 
   const value = useMemo<ThemeModeContext>(() => {
     const baseNavigation = scheme === "dark" ? DarkTheme : DefaultTheme;
@@ -41,9 +45,9 @@ export function ThemeProvider({ children }: PropsWithChildren) {
           }
         }
       },
-      toggleScheme: () => setManualScheme((current) => (current === "light" ? "dark" : "light"))
+      toggleScheme: () => void updatePreference("themeMode", scheme === "dark" ? "light" : "dark")
     };
-  }, [colors, scheme]);
+  }, [colors, scheme, updatePreference]);
 
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

@@ -10,6 +10,7 @@ import { ProgressRing } from "@/components/ProgressRing";
 import { images } from "@/data/images";
 import { motivationalMessages } from "@/data/mockData";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { usePreferences } from "@/preferences/PreferencesContext";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackParamList } from "@/types";
 import { formatDuration, shortDate } from "@/utils/format";
@@ -17,9 +18,14 @@ import { formatDuration, shortDate } from "@/utils/format";
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useThemeMode();
+  const { preferences } = usePreferences();
   const { workouts, stats } = useWorkouts();
   const isNew = workouts.length === 0;
-  const message = isNew ? "Start your first session and build from zero." : motivationalMessages[new Date().getDay() % motivationalMessages.length];
+  const message = preferences.motivationalMessages
+    ? isNew
+      ? "Start your first session and build from zero."
+      : motivationalMessages[new Date().getDay() % motivationalMessages.length]
+    : undefined;
 
   return (
     <AppScreen>

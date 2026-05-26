@@ -1,14 +1,18 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CheckCircle2, Medal } from "lucide-react-native";
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useThemeMode } from "@/theme/ThemeProvider";
+import { RootStackParamList } from "@/types";
 import { shortDate } from "@/utils/format";
 
 const days = Array.from({ length: 30 }, (_, index) => index + 1);
 
 export function CalendarScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useThemeMode();
   const { workouts } = useWorkouts();
   const completedDays = useMemo(() => new Set(workouts.map((workout) => new Date(workout.completedAt).getDate())), [workouts]);
@@ -24,10 +28,10 @@ export function CalendarScreen() {
         {days.map((day) => {
           const complete = completedDays.has(day);
           return (
-            <View key={day} style={[styles.day, { backgroundColor: complete ? theme.colors.primary : theme.colors.cardSoft }]}>
+            <Pressable key={day} onPress={() => navigation.navigate("CalendarDayDetail", { date: `Day ${day}` })} style={[styles.day, { backgroundColor: complete ? theme.colors.primary : theme.colors.cardSoft }]}>
               <Text style={[styles.dayText, { color: complete ? "#fff" : theme.colors.muted }]}>{day}</Text>
               {complete ? <CheckCircle2 color="#fff" size={12} /> : null}
-            </View>
+            </Pressable>
           );
         })}
       </View>
@@ -40,7 +44,7 @@ export function CalendarScreen() {
           <Text style={[styles.historyMeta, { color: theme.colors.muted }]}>Finished workouts will appear here.</Text>
         </View>
       ) : workouts.map((workout) => (
-        <View key={workout.id} style={[styles.history, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <Pressable key={workout.id} onPress={() => navigation.navigate("CalendarDayDetail", { date: shortDate(workout.completedAt) })} style={[styles.history, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
           <View style={[styles.badge, { backgroundColor: `${theme.colors.green}22` }]}>
             <Medal color={theme.colors.green} size={20} />
           </View>
@@ -49,7 +53,7 @@ export function CalendarScreen() {
             <Text style={[styles.historyMeta, { color: theme.colors.muted }]}>{shortDate(workout.completedAt)} - {workout.totalSets} sets - {workout.totalReps} reps</Text>
           </View>
           <Text style={[styles.completed, { color: theme.colors.green }]}>Done</Text>
-        </View>
+        </Pressable>
       ))}
     </AppScreen>
   );

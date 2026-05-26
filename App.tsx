@@ -1,6 +1,7 @@
 import "react-native-gesture-handler";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import { PreferencesProvider } from "@/preferences/PreferencesContext";
 import { ThemeProvider, useThemeMode } from "@/theme/ThemeProvider";
 import { RootNavigator } from "@/navigation/RootNavigator";
 
@@ -17,8 +18,10 @@ function AppShell() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppShell />
-    </ThemeProvider>
+    <PreferencesProvider>
+      <ThemeProvider>
+        <AppShell />
+      </ThemeProvider>
+    </PreferencesProvider>
   );
 }

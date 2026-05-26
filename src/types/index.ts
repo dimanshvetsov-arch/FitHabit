@@ -51,13 +51,18 @@ export type RootStackParamList = {
   ActiveWorkout: { setup: WorkoutSetup; initialSet?: number; initialCompletedReps?: number; initialElapsedSeconds?: number };
   RestTimer: { setup: WorkoutSetup; completedSets: number; completedReps: number; elapsedSeconds: number };
   WorkoutSummary: { record: WorkoutRecord };
+  CalendarDayDetail: { date: string };
+  ProfileEdit: undefined;
+  PrivacyPolicy: undefined;
+  Terms: undefined;
 };
 
 export type MainTabParamList = {
   Home: undefined;
+  Exercises: undefined;
   Progress: undefined;
   Calendar: undefined;
-  Profile: undefined;
+  Settings: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, T>;

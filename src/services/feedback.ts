@@ -1,15 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as Haptics from "expo-haptics";
+import { defaultPreferences, PREFERENCES_KEY } from "@/preferences/PreferencesContext";
 
 type SoundName = "tap" | "start" | "tick" | "success" | "warning";
 
 type FeedbackSettings = {
   sounds: boolean;
+  haptics: boolean;
 };
-
-const SETTINGS_KEY = "fithabit:feedback-settings";
-const DEFAULT_SETTINGS: FeedbackSettings = { sounds: true };
 
 const soundAssets: Record<SoundName, number> = {
   tap: require("../../assets/sounds/tap.wav"),
@@ -36,8 +35,9 @@ async function ensureAudioMode() {
 }
 
 async function getSettings(): Promise<FeedbackSettings> {
-  const stored = await AsyncStorage.getItem(SETTINGS_KEY);
-  return stored ? { ...DEFAULT_SETTINGS, ...(JSON.parse(stored) as Partial<FeedbackSettings>) } : DEFAULT_SETTINGS;
+  const stored = await AsyncStorage.getItem(PREFERENCES_KEY);
+  const preferences = stored ? { ...defaultPreferences, ...(JSON.parse(stored) as Partial<typeof defaultPreferences>) } : defaultPreferences;
+  return { sounds: preferences.soundEffects, haptics: preferences.hapticFeedback };
 }
 
 export async function loadFeedbackSettings() {
@@ -45,7 +45,9 @@ export async function loadFeedbackSettings() {
 }
 
 export async function saveFeedbackSettings(settings: FeedbackSettings) {
-  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  const stored = await AsyncStorage.getItem(PREFERENCES_KEY);
+  const preferences = stored ? { ...defaultPreferences, ...(JSON.parse(stored) as Partial<typeof defaultPreferences>) } : defaultPreferences;
+  await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...preferences, soundEffects: settings.sounds, hapticFeedback: settings.haptics }));
 }
 
 export async function playFeedbackSound(name: SoundName) {
@@ -67,11 +69,17 @@ export async function playFeedbackSound(name: SoundName) {
 }
 
 export async function tapFeedback() {
-  void Haptics.selectionAsync();
+  const settings = await getSettings();
+  if (settings.haptics) {
+    void Haptics.selectionAsync();
+  }
   await playFeedbackSound("tap");
 }
 
 export async function actionFeedback(sound: SoundName) {
-  void Haptics.impactAsync(sound === "warning" ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
+  const settings = await getSettings();
+  if (settings.haptics) {
+    void Haptics.impactAsync(sound === "warning" ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
+  }
   await playFeedbackSound(sound);
 }

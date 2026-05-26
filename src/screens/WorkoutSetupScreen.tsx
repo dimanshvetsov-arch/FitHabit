@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { exercises } from "@/data/mockData";
+import { usePreferences } from "@/preferences/PreferencesContext";
 import { actionFeedback, playFeedbackSound } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackScreenProps, TrackingType, WorkoutSetup } from "@/types";
@@ -65,26 +66,28 @@ function trackingCopy(type: TrackingType) {
 
 export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"WorkoutSetup">) {
   const { theme } = useThemeMode();
+  const { preferences } = usePreferences();
   const exercise = exercises.find((item) => item.id === route.params.exerciseId);
   const trackingType = exercise?.trackingType ?? "reps_sets";
   const exerciseName = route.params.variantName ?? route.params.exerciseName;
 
-  const [reps, setReps] = useState(12);
-  const [sets, setSets] = useState(4);
-  const [restSeconds, setRestSeconds] = useState(60);
-  const [durationSeconds, setDurationSeconds] = useState(trackingType === "timer_only" ? 45 : 30);
+  const [reps, setReps] = useState(preferences.defaultReps);
+  const [sets, setSets] = useState(preferences.defaultSets);
+  const [restSeconds, setRestSeconds] = useState(preferences.defaultRestSeconds);
+  const [durationSeconds, setDurationSeconds] = useState(trackingType === "timer_only" ? preferences.defaultPlankSeconds : 30);
   const [rounds, setRounds] = useState(3);
   const [distance, setDistance] = useState("3");
   const [goalMinutes, setGoalMinutes] = useState("25");
   const [repsGoal, setRepsGoal] = useState(60);
+  const [weight, setWeight] = useState(0);
   const [notes, setNotes] = useState("");
 
   const pace = useMemo(() => {
     const distanceValue = Number(distance);
     const minutesValue = Number(goalMinutes);
     if (!distanceValue || !minutesValue) return "Set distance and time";
-    return `${(minutesValue / distanceValue).toFixed(1)} min/km`;
-  }, [distance, goalMinutes]);
+    return `${(minutesValue / distanceValue).toFixed(1)} min/${preferences.distanceUnit}`;
+  }, [distance, goalMinutes, preferences.distanceUnit]);
 
   const startWorkout = () => {
     const distanceValue = Math.max(0, Number(distance) || 0);
@@ -126,6 +129,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
           <Stepper label="Reps per set" value={reps} min={1} step={1} onChange={setReps} />
           <Stepper label="Sets" value={sets} min={1} step={1} onChange={setSets} />
           <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
+          {exercise?.category === "Gym" ? <Stepper label={`Training weight (${preferences.weightUnit})`} value={weight} min={0} step={5} onChange={setWeight} unit={preferences.weightUnit} /> : null}
         </>
       ) : null}
 
@@ -143,7 +147,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
             <Text style={[styles.stepperLabel, { color: theme.colors.muted }]}>Distance</Text>
             <View style={styles.inlineInput}>
               <TextInput value={distance} onChangeText={setDistance} keyboardType="decimal-pad" style={[styles.bigInput, { color: theme.colors.text }]} />
-              <Text style={[styles.inputUnit, { color: theme.colors.muted }]}>km</Text>
+              <Text style={[styles.inputUnit, { color: theme.colors.muted }]}>{preferences.distanceUnit}</Text>
             </View>
           </View>
           <View style={[styles.inputCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>

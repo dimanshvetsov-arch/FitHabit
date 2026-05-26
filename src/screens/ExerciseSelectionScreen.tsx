@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Search } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -5,11 +7,12 @@ import { AppScreen } from "@/components/AppScreen";
 import { ImageCard } from "@/components/ImageCard";
 import { exercises } from "@/data/mockData";
 import { useThemeMode } from "@/theme/ThemeProvider";
-import { ExerciseCategory, RootStackScreenProps } from "@/types";
+import { ExerciseCategory, RootStackParamList } from "@/types";
 
 const categories: Array<ExerciseCategory | "All"> = ["All", "Push", "Pull", "Legs", "Core", "Full Body", "Cardio", "Gym"];
 
-export function ExerciseSelectionScreen({ navigation }: RootStackScreenProps<"ExerciseSelection">) {
+export function ExerciseSelectionScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useThemeMode();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ExerciseCategory | "All">("All");

@@ -30,5 +30,5 @@ export async function getDailyReminders() {
 }
 
 export async function clearWorkoutData() {
-  await AsyncStorage.multiRemove([WORKOUTS_KEY, "fithabit:workouts", REMINDERS_KEY, "fithabit:feedback-settings"]);
+  await AsyncStorage.multiRemove([WORKOUTS_KEY, "fithabit:workouts"]);
 }

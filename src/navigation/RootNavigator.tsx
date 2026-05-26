@@ -1,17 +1,21 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { CalendarDays, Dumbbell, Home, LineChart, User } from "lucide-react-native";
+import { CalendarDays, Dumbbell, Home, LineChart, Settings } from "lucide-react-native";
 import { Platform } from "react-native";
+import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { MainTabParamList, RootStackParamList } from "@/types";
 import { ActiveWorkoutScreen } from "@/screens/ActiveWorkoutScreen";
 import { CalendarScreen } from "@/screens/CalendarScreen";
+import { CalendarDayDetailScreen } from "@/screens/CalendarDayDetailScreen";
 import { ExerciseSelectionScreen } from "@/screens/ExerciseSelectionScreen";
 import { ExerciseDetailScreen } from "@/screens/ExerciseDetailScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
-import { ProfileScreen } from "@/screens/ProfileScreen";
+import { LegalScreen } from "@/screens/LegalScreen";
+import { ProfileEditScreen } from "@/screens/ProfileEditScreen";
 import { ProgressScreen } from "@/screens/ProgressScreen";
 import { RestTimerScreen } from "@/screens/RestTimerScreen";
+import { SettingsScreen } from "@/screens/SettingsScreen";
 import { WorkoutSetupScreen } from "@/screens/WorkoutSetupScreen";
 import { WorkoutSummaryScreen } from "@/screens/WorkoutSummaryScreen";
 
@@ -48,9 +52,10 @@ function MainTabs() {
       }}
     >
       <Tabs.Screen name="Home" component={HomeScreen} options={{ tabBarIcon: ({ color }) => <Home color={color} size={22} /> }} />
+      <Tabs.Screen name="Exercises" component={ExerciseSelectionScreen} options={{ tabBarIcon: ({ color }) => <Dumbbell color={color} size={22} /> }} />
       <Tabs.Screen name="Progress" component={ProgressScreen} options={{ tabBarIcon: ({ color }) => <LineChart color={color} size={22} /> }} />
       <Tabs.Screen name="Calendar" component={CalendarScreen} options={{ tabBarIcon: ({ color }) => <CalendarDays color={color} size={22} /> }} />
-      <Tabs.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: ({ color }) => <User color={color} size={22} /> }} />
+      <Tabs.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: ({ color }) => <Settings color={color} size={22} /> }} />
     </Tabs.Navigator>
   );
 }
@@ -60,12 +65,13 @@ export function RootNavigator() {
 
   return (
     <Stack.Navigator
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.text,
         headerTitleStyle: { fontWeight: "900" },
-        contentStyle: { backgroundColor: theme.colors.background }
-      }}
+        contentStyle: { backgroundColor: theme.colors.background },
+        headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />
+      })}
     >
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseSelection" component={ExerciseSelectionScreen} options={{ title: "Choose Exercise" }} />
@@ -74,6 +80,10 @@ export function RootNavigator() {
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RestTimer" component={RestTimerScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CalendarDayDetail" component={CalendarDayDetailScreen} options={{ title: "Day Detail" }} />
+      <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ title: "Edit Profile" }} />
+      <Stack.Screen name="PrivacyPolicy" component={LegalScreen} options={{ title: "Privacy Policy" }} />
+      <Stack.Screen name="Terms" component={LegalScreen} options={{ title: "Terms" }} />
     </Stack.Navigator>
   );
 }

@@ -4,20 +4,27 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { ProgressRing } from "@/components/ProgressRing";
+import { usePreferences } from "@/preferences/PreferencesContext";
 import { playFeedbackSound } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackScreenProps } from "@/types";
 
 export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"RestTimer">) {
   const { theme } = useThemeMode();
+  const { preferences } = usePreferences();
   const { setup, completedSets, completedReps, elapsedSeconds } = route.params;
   const [remaining, setRemaining] = useState(setup.restSeconds);
 
   useEffect(() => {
     if (remaining <= 0) {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void playFeedbackSound("success");
+      if (preferences.hapticFeedback) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      if (preferences.restTimerSound) {
+        void playFeedbackSound("success");
+      }
       navigation.replace("ActiveWorkout", {
         setup,
         initialSet: completedSets + 1,
@@ -26,15 +33,18 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
       });
       return;
     }
-    if (remaining <= 3) {
+    if (remaining <= 3 && preferences.restTimerSound) {
       void playFeedbackSound("tick");
     }
     const timeout = setTimeout(() => setRemaining((value) => value - 1), 1000);
     return () => clearTimeout(timeout);
-  }, [navigation, remaining, setup]);
+  }, [completedReps, completedSets, elapsedSeconds, navigation, preferences.restTimerSound, remaining, setup]);
 
   return (
     <AppScreen scroll={false} contentStyle={styles.screen}>
+      <View style={styles.backWrap}>
+        <HeaderBackButton onPress={() => navigation.goBack()} />
+      </View>
       <Text style={[styles.kicker, { color: theme.colors.muted }]}>Rest before set {completedSets + 1}</Text>
       <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <ProgressRing progress={(setup.restSeconds - remaining) / setup.restSeconds} size={230} label="rest" />
@@ -62,6 +72,11 @@ const styles = StyleSheet.create({
     padding: 22,
     justifyContent: "center",
     gap: 28
+  },
+  backWrap: {
+    position: "absolute",
+    top: 58,
+    left: 22
   },
   kicker: {
     textAlign: "center",
