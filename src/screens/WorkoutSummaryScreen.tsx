@@ -13,13 +13,51 @@ import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackParamList, RootStackScreenProps } from "@/types";
 import { formatDuration } from "@/utils/format";
 
+function dateKey(value: string | Date) {
+  return (typeof value === "string" ? value : value.toISOString()).slice(0, 10);
+}
+
+function calculateDisplayStreak(workouts: { completedAt: string }[]) {
+  const days = new Set(workouts.map((workout) => dateKey(workout.completedAt)));
+  if (days.size === 0) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const cursor = new Date(today);
+
+  if (!days.has(dateKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!days.has(dateKey(cursor))) return 0;
+  }
+
+  let streak = 0;
+  while (days.has(dateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function startOfWeek(date: Date) {
+  const next = new Date(date);
+  const day = (next.getDay() + 6) % 7;
+  next.setHours(0, 0, 0, 0);
+  next.setDate(next.getDate() - day);
+  return next;
+}
+
 export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSummary">) {
   const { theme } = useThemeMode();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { addWorkout, currentStreak, weeklyProgress, exerciseStats } = useWorkouts();
+  const { addWorkout, workouts, weeklyProgress, exerciseStats } = useWorkouts();
   const { record } = route.params;
   const exerciseStat = exerciseStats[record.exerciseName];
   const timesCompleted = Math.max(exerciseStat?.completionCount ?? 0, 1);
+  const displayWorkouts = workouts.some((workout) => workout.id === record.id) ? workouts : [record, ...workouts];
+  const displayStreak = calculateDisplayStreak(displayWorkouts);
+  const weekStart = startOfWeek(new Date());
+  const displayWeeklyCompleted = new Set(displayWorkouts.filter((workout) => new Date(workout.completedAt) >= weekStart).map((workout) => workout.id)).size;
+  const displayWeeklyPercentage = Math.min(100, Math.round((displayWeeklyCompleted / Math.max(1, weeklyProgress.goal)) * 100));
   const savedRef = useRef(false);
 
   useEffect(() => {
@@ -49,8 +87,8 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
         <MetricCard label="Calories" value={`${record.calories}`} icon={Award} color={theme.colors.secondary} />
       </View>
       <View style={styles.metrics}>
-        <MetricCard label="Streak" value={`${currentStreak}d`} icon={Flame} color={theme.colors.orange} />
-        <MetricCard label="Weekly progress" value={`${weeklyProgress.percentage}%`} icon={Award} color={theme.colors.primary} />
+        <MetricCard label="Streak" value={`${displayStreak}d`} icon={Flame} color={theme.colors.orange} />
+        <MetricCard label="Weekly progress" value={`${displayWeeklyPercentage}%`} icon={Award} color={theme.colors.primary} />
       </View>
       <MetricCard label="Times completed" value={`${timesCompleted}`} icon={Dumbbell} color={theme.colors.green} />
 

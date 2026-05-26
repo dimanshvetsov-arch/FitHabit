@@ -63,7 +63,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     ]).then(async ([storedUser, storedAccounts, legacyAccounts, storedSession, legacySession, storedNames, legacyNames]) => {
       const legacyUser = storedUser ? (JSON.parse(storedUser) as UserAccount) : null;
       const savedAccounts = storedAccounts ? (JSON.parse(storedAccounts) as UserAccount[]) : legacyAccounts ? (JSON.parse(legacyAccounts) as UserAccount[]) : legacyUser ? [legacyUser] : [];
-      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacySession ? (JSON.parse(legacySession) as string) : legacyUser?.id;
+      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacySession ? (JSON.parse(legacySession) as string) : undefined;
       const sessionUser = savedAccounts.find((account) => account.id === sessionId) ?? null;
       setAccounts(savedAccounts);
       setUser(sessionUser);
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     if (next) {
       await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next.id));
     } else {
-      await AsyncStorage.removeItem(SESSION_KEY);
+      await AsyncStorage.multiRemove([SESSION_KEY, legacyStorageKeys.currentUser, ACCOUNT_KEY]);
     }
   }, []);
 
