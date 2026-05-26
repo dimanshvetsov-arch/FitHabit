@@ -19,7 +19,7 @@ export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useThemeMode();
   const { preferences } = usePreferences();
-  const { workouts, stats } = useWorkouts();
+  const { workouts, stats, weeklyProgress } = useWorkouts();
   const isNew = workouts.length === 0;
   const message = preferences.motivationalMessages
     ? isNew
@@ -46,15 +46,15 @@ export function HomeScreen() {
         <View style={styles.progressText}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Weekly progress</Text>
           <Text style={[styles.body, { color: theme.colors.muted }]}>
-            {isNew ? "No workouts yet. Your first completed session starts the chart." : "Four sessions keeps your habit engine warm."}
+            {isNew ? "No workouts yet. Your first completed session starts the chart." : `${weeklyProgress.completed}/${weeklyProgress.goal} workouts this week`}
           </Text>
         </View>
-        <ProgressRing progress={Math.min(stats.totalWorkouts / 7, 1)} label="week" />
+        <ProgressRing progress={weeklyProgress.percentage / 100} label="week" />
       </View>
 
       <View style={styles.metrics}>
         <MetricCard label="Workout streak" value={`${stats.streak}d`} icon={Flame} color={theme.colors.orange} />
-        <MetricCard label="Minutes trained" value={`${Math.round(stats.totalHours * 60)}`} icon={Timer} color={theme.colors.green} />
+        <MetricCard label="Minutes trained" value={`${stats.totalMinutesTrained}`} icon={Timer} color={theme.colors.green} />
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Recent workouts</Text>
@@ -69,7 +69,7 @@ export function HomeScreen() {
             <View key={workout.id} style={[styles.recentItem, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <View>
                 <Text style={[styles.recentName, { color: theme.colors.text }]}>{workout.exerciseName}</Text>
-                <Text style={[styles.body, { color: theme.colors.muted }]}>{shortDate(workout.completedAt)} - {formatDuration(workout.durationSeconds)}</Text>
+                <Text style={[styles.body, { color: theme.colors.muted }]}>{shortDate(workout.completedAt)} - {workout.totalMinutes} min</Text>
               </View>
               <Text style={[styles.reps, { color: theme.colors.primary }]}>{workout.totalReps}</Text>
             </View>

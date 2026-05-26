@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Pause, Plus, SquareCheckBig, X } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
@@ -15,7 +15,9 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   const [currentSet] = useState(route.params.initialSet ?? 1);
   const [reps, setReps] = useState(0);
   const [completedReps] = useState(route.params.initialCompletedReps ?? 0);
+  const [roundSeconds, setRoundSeconds] = useState(0);
   const [paused, setPaused] = useState(false);
+  const finishedRef = useRef(false);
   const targetReps = setup.reps * setup.sets;
   const isRepBased = setup.trackingType === "reps_sets" || setup.trackingType === "reps_timer";
   const roundLabel = setup.trackingType === "reps_sets" ? "Set" : "Round";
@@ -23,23 +25,37 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
 
   useEffect(() => {
     if (paused) return;
-    const interval = setInterval(() => setElapsedSeconds((value) => value + 1), 1000);
+    const interval = setInterval(() => {
+      setElapsedSeconds((value) => value + 1);
+      setRoundSeconds((value) => value + 1);
+    }, 1000);
     return () => clearInterval(interval);
   }, [paused]);
 
   const progressText = useMemo(() => `${completedReps + reps}/${targetReps} reps`, [completedReps, reps, targetReps]);
-  const timerRemaining = primaryTimer > 0 ? Math.max(0, primaryTimer - elapsedSeconds) : 0;
+  const timerRemaining = primaryTimer > 0 ? Math.max(0, primaryTimer - roundSeconds) : 0;
+
+  useEffect(() => {
+    if (finishedRef.current || primaryTimer <= 0 || setup.trackingType === "reps_sets") return;
+    if (roundSeconds >= primaryTimer) {
+      finishSet(completedReps + reps);
+    }
+  }, [completedReps, primaryTimer, reps, roundSeconds, setup.trackingType]);
 
   const addRep = () => {
     void tapFeedback();
-    if (reps + 1 === setup.reps) {
+    const nextReps = Math.min(setup.reps, reps + 1);
+    if (nextReps >= setup.reps) {
       void playFeedbackSound("success");
+      setReps(nextReps);
+      finishSet(completedReps + nextReps);
+      return;
     }
-    setReps((value) => Math.min(setup.reps, value + 1));
+    setReps(nextReps);
   };
 
-  const finishSet = () => {
-    const nextCompletedReps = completedReps + reps;
+  const finishSet = (nextCompletedReps = completedReps + reps) => {
+    if (finishedRef.current) return;
     if (currentSet >= setup.sets) {
       void actionFeedback("success");
       finishWorkout(nextCompletedReps, setup.sets);
@@ -55,14 +71,24 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   };
 
   const finishWorkout = (totalReps = completedReps + reps, totalSets = currentSet) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    const durationSeconds = Math.max(1, elapsedSeconds);
+    const totalMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
     const record: WorkoutRecord = {
       id: Date.now().toString(),
       exerciseName: setup.exerciseName,
+      variationName: setup.variationName,
+      trackingType: setup.trackingType,
       completedAt: new Date().toISOString(),
+      totalMinutes,
       totalReps: setup.trackingType === "distance_time" || setup.trackingType === "timer_only" ? 0 : totalReps,
+      completedSets: totalSets,
       totalSets,
-      durationSeconds: elapsedSeconds,
-      calories: Math.max(24, Math.round(totalReps * 0.7 + elapsedSeconds / 50 + (setup.distance ?? 0) * 55))
+      targetReps: setup.reps,
+      targetSets: setup.sets,
+      durationSeconds,
+      calories: Math.max(24, Math.round(totalReps * 0.7 + durationSeconds / 50 + (setup.distance ?? 0) * 55))
     };
     navigation.replace("WorkoutSummary", { record });
   };
@@ -86,7 +112,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
               <X color="#fff" size={22} />
             </Pressable>
           </View>
-          <Text style={styles.title}>{setup.exerciseName}</Text>
+          <Text style={styles.title}>{setup.variationName ?? setup.exerciseName}</Text>
           <Text style={styles.timer}>{primaryTimer > 0 ? formatDuration(timerRemaining) : formatDuration(elapsedSeconds)}</Text>
         </View>
 

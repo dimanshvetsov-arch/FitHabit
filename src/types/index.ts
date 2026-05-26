@@ -21,6 +21,7 @@ export type Exercise = {
 export type WorkoutSetup = {
   exerciseId: string;
   exerciseName: string;
+  variationName?: string;
   trackingType: TrackingType;
   reps: number;
   sets: number;
@@ -36,9 +37,15 @@ export type WorkoutSetup = {
 export type WorkoutRecord = {
   id: string;
   exerciseName: string;
+  variationName?: string;
+  trackingType: TrackingType;
   completedAt: string;
+  totalMinutes: number;
   totalReps: number;
+  completedSets: number;
   totalSets: number;
+  targetReps: number;
+  targetSets: number;
   durationSeconds: number;
   calories: number;
 };

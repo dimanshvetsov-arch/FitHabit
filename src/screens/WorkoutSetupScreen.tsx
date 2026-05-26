@@ -96,7 +96,8 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
     const effectiveReps = trackingType === "reps_sets" ? reps : trackingType === "reps_timer" ? repsGoal : 1;
     const setup: WorkoutSetup = {
       exerciseId: route.params.exerciseId,
-      exerciseName,
+      exerciseName: route.params.exerciseName,
+      variationName: route.params.variantName ?? route.params.exerciseName,
       trackingType,
       reps: effectiveReps,
       sets: effectiveSets,

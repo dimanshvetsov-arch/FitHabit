@@ -1,14 +1,14 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Award, Dumbbell, Flame, Timer } from "lucide-react-native";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { MetricCard } from "@/components/MetricCard";
+import { useWorkouts } from "@/hooks/useWorkouts";
 import { actionFeedback } from "@/services/feedback";
-import { saveWorkout } from "@/storage/workoutStorage";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackParamList, RootStackScreenProps } from "@/types";
 import { formatDuration } from "@/utils/format";
@@ -16,12 +16,16 @@ import { formatDuration } from "@/utils/format";
 export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSummary">) {
   const { theme } = useThemeMode();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { addWorkout } = useWorkouts();
   const { record } = route.params;
+  const savedRef = useRef(false);
 
   useEffect(() => {
-    void saveWorkout(record);
+    if (savedRef.current) return;
+    savedRef.current = true;
+    void addWorkout(record);
     void actionFeedback("success");
-  }, [record]);
+  }, [addWorkout, record]);
 
   return (
     <AppScreen contentStyle={styles.content}>
@@ -36,10 +40,10 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
 
       <View style={styles.metrics}>
         <MetricCard label="Total reps" value={`${record.totalReps}`} icon={Dumbbell} />
-        <MetricCard label="Sets" value={`${record.totalSets}`} icon={Flame} color={theme.colors.orange} />
+        <MetricCard label="Sets" value={`${record.completedSets}`} icon={Flame} color={theme.colors.orange} />
       </View>
       <View style={styles.metrics}>
-        <MetricCard label="Duration" value={formatDuration(record.durationSeconds)} icon={Timer} color={theme.colors.green} />
+        <MetricCard label="Minutes" value={`${record.totalMinutes}`} icon={Timer} color={theme.colors.green} />
         <MetricCard label="Calories" value={`${record.calories}`} icon={Award} color={theme.colors.secondary} />
       </View>
 

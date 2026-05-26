@@ -50,7 +50,9 @@ export function CalendarScreen() {
           </View>
           <View style={styles.historyText}>
             <Text style={[styles.historyName, { color: theme.colors.text }]}>{workout.exerciseName}</Text>
-            <Text style={[styles.historyMeta, { color: theme.colors.muted }]}>{shortDate(workout.completedAt)} - {workout.totalSets} sets - {workout.totalReps} reps</Text>
+            <Text style={[styles.historyMeta, { color: theme.colors.muted }]}>
+              {shortDate(workout.completedAt)} - {workout.totalMinutes} min - {workout.completedSets} sets
+            </Text>
           </View>
           <Text style={[styles.completed, { color: theme.colors.green }]}>Done</Text>
         </Pressable>
