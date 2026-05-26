@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, ImageBackground, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { images } from "@/data/images";
-import { actionFeedback, playFeedbackSound, speakFeedback } from "@/services/feedback";
+import { actionFeedback, playFeedbackSound } from "@/services/feedback";
 import { RootStackScreenProps, WorkoutRecord } from "@/types";
 import { formatDuration } from "@/utils/format";
 
@@ -24,17 +24,13 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
     return () => clearInterval(interval);
   }, [paused]);
 
-  useEffect(() => {
-    void speakFeedback(`${setup.exerciseName}. Set ${currentSet} of ${setup.sets}.`);
-  }, [currentSet, setup.exerciseName, setup.sets]);
-
   const progressText = useMemo(() => `${completedReps + reps}/${targetReps} reps`, [completedReps, reps, targetReps]);
 
   const addRep = () => {
     void Haptics.selectionAsync();
     void playFeedbackSound("tap");
     if (reps + 1 === setup.reps) {
-      void speakFeedback("Target reached.");
+      void playFeedbackSound("success");
     }
     setReps((value) => Math.min(setup.reps, value + 1));
   };
@@ -42,11 +38,11 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   const finishSet = () => {
     const nextCompletedReps = completedReps + reps;
     if (currentSet >= setup.sets) {
-      void actionFeedback("success", "Workout complete. Great work.");
+      void actionFeedback("success");
       finishWorkout(nextCompletedReps, setup.sets);
       return;
     }
-    void actionFeedback("success", "Set complete. Rest timer started.");
+    void actionFeedback("success");
     navigation.navigate("RestTimer", {
       setup,
       completedSets: currentSet,
@@ -69,7 +65,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
   };
 
   const leaveWorkout = () => {
-    void actionFeedback("warning", "Workout paused. Leave session?");
+    void actionFeedback("warning");
     Alert.alert("Leave workout?", "This active session will not be saved.", [
       { text: "Stay", style: "cancel" },
       { text: "Leave", style: "destructive", onPress: () => navigation.navigate("MainTabs") }
@@ -105,7 +101,7 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
             onPress={() => {
               const next = !paused;
               setPaused(next);
-              void speakFeedback(next ? "Workout paused." : "Resuming workout.");
+              void playFeedbackSound(next ? "warning" : "start");
             }}
             style={styles.actionButton}
           />

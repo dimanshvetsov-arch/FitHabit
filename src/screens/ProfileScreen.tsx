@@ -5,7 +5,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { MetricCard } from "@/components/MetricCard";
 import { useWorkouts } from "@/hooks/useWorkouts";
-import { actionFeedback, loadFeedbackSettings, saveFeedbackSettings, speakFeedback } from "@/services/feedback";
+import { actionFeedback, loadFeedbackSettings, saveFeedbackSettings } from "@/services/feedback";
 import { getDailyReminders, setDailyReminders } from "@/storage/workoutStorage";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
@@ -14,19 +14,17 @@ export function ProfileScreen() {
   const { stats, resetWorkouts } = useWorkouts();
   const [reminders, setReminders] = useState(false);
   const [sounds, setSounds] = useState(true);
-  const [voice, setVoice] = useState(true);
   const isNew = stats.totalWorkouts === 0;
 
   useEffect(() => {
     void getDailyReminders().then(setReminders);
     void loadFeedbackSettings().then((settings) => {
       setSounds(settings.sounds);
-      setVoice(settings.voice);
     });
   }, []);
 
   const toggleReminders = async (enabled: boolean) => {
-    void actionFeedback("tap", enabled ? "Daily reminders on." : "Daily reminders off.");
+    void actionFeedback("tap");
     setReminders(enabled);
     await setDailyReminders(enabled);
     if (enabled) {
@@ -48,17 +46,9 @@ export function ProfileScreen() {
 
   const toggleSounds = async (enabled: boolean) => {
     setSounds(enabled);
-    await saveFeedbackSettings({ sounds: enabled, voice });
+    await saveFeedbackSettings({ sounds: enabled });
     if (enabled) {
-      void actionFeedback("success", "Sound effects on.");
-    }
-  };
-
-  const toggleVoice = async (enabled: boolean) => {
-    setVoice(enabled);
-    await saveFeedbackSettings({ sounds, voice: enabled });
-    if (enabled) {
-      void speakFeedback("Voice coach on.");
+      void actionFeedback("success");
     }
   };
 
@@ -73,7 +63,6 @@ export function ProfileScreen() {
           await resetWorkouts();
           setReminders(false);
           setSounds(true);
-          setVoice(true);
         }
       }
     ]);
@@ -122,17 +111,6 @@ export function ProfileScreen() {
           <Text style={[styles.settingMeta, { color: theme.colors.muted }]}>Clicks, timers, workout cues</Text>
         </View>
         <Switch value={sounds} onValueChange={toggleSounds} thumbColor="#fff" trackColor={{ false: theme.colors.cardSoft, true: theme.colors.green }} />
-      </View>
-
-      <View style={[styles.setting, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-        <View style={[styles.iconBox, { backgroundColor: `${theme.colors.orange}22` }]}>
-          <Volume2 color={theme.colors.orange} size={20} />
-        </View>
-        <View style={styles.settingText}>
-          <Text style={[styles.settingTitle, { color: theme.colors.text }]}>Voice coach</Text>
-          <Text style={[styles.settingMeta, { color: theme.colors.muted }]}>Spoken starts, rests, reps, and finishes</Text>
-        </View>
-        <Switch value={voice} onValueChange={toggleVoice} thumbColor="#fff" trackColor={{ false: theme.colors.cardSoft, true: theme.colors.orange }} />
       </View>
 
       <Pressable onPress={toggleScheme} style={[styles.setting, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>

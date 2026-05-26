@@ -19,7 +19,7 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
 
   useEffect(() => {
     void saveWorkout(record);
-    void actionFeedback("success", `Workout saved. ${record.totalReps} total reps.`);
+    void actionFeedback("success");
   }, [record]);
 
   return (

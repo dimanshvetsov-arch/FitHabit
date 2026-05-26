@@ -1,17 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 import * as Haptics from "expo-haptics";
-import * as Speech from "expo-speech";
 
 type SoundName = "tap" | "start" | "tick" | "success" | "warning";
 
 type FeedbackSettings = {
   sounds: boolean;
-  voice: boolean;
 };
 
 const SETTINGS_KEY = "fithabit:feedback-settings";
-const DEFAULT_SETTINGS: FeedbackSettings = { sounds: true, voice: true };
+const DEFAULT_SETTINGS: FeedbackSettings = { sounds: true };
 
 const soundAssets: Record<SoundName, number> = {
   tap: require("../../assets/sounds/tap.wav"),
@@ -68,29 +66,12 @@ export async function playFeedbackSound(name: SoundName) {
   }
 }
 
-export async function speakFeedback(text: string) {
-  const settings = await getSettings();
-  if (!settings.voice) return;
-  try {
-    Speech.stop();
-    Speech.speak(text, {
-      pitch: 1.03,
-      rate: 0.94
-    });
-  } catch {
-    // Speech availability varies by platform.
-  }
-}
-
 export async function tapFeedback() {
   void Haptics.selectionAsync();
   await playFeedbackSound("tap");
 }
 
-export async function actionFeedback(sound: SoundName, voice?: string) {
+export async function actionFeedback(sound: SoundName) {
   void Haptics.impactAsync(sound === "warning" ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Medium);
   await playFeedbackSound(sound);
-  if (voice) {
-    await speakFeedback(voice);
-  }
 }

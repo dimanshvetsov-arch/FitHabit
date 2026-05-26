@@ -82,7 +82,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
         title="Start Workout"
         icon={TimerReset}
         onPress={() => {
-          void actionFeedback("start", `Starting ${exerciseName}. ${sets} sets. ${reps} reps.`);
+          void actionFeedback("start");
           navigation.navigate("ActiveWorkout", {
             setup: {
               exerciseId: route.params.exerciseId,
