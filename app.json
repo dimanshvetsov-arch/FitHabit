@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "FitHabit",
+    "slug": "fithabit",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "fithabit",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1117"
+      }
+    },
+    "plugins": ["expo-notifications"]
+  }
+}
