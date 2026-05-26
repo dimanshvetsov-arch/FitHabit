@@ -1,6 +1,6 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-export type ExerciseCategory = "Push" | "Pull" | "Legs" | "Core";
+export type ExerciseCategory = "Push" | "Pull" | "Legs" | "Core" | "Full Body" | "Cardio" | "Gym";
 
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
@@ -11,14 +11,9 @@ export type Exercise = {
   image: string;
   description: string;
   accent: string;
-};
-
-export type PushUpType = {
-  id: string;
-  name: string;
-  description: string;
   difficulty: Difficulty;
-  image: string;
+  muscles: string[];
+  variations: string[];
 };
 
 export type WorkoutSetup = {
@@ -43,7 +38,7 @@ export type WorkoutRecord = {
 export type RootStackParamList = {
   MainTabs: undefined;
   ExerciseSelection: undefined;
-  PushUpType: { exerciseId: string; exerciseName: string };
+  ExerciseDetail: { exerciseId: string };
   WorkoutSetup: { exerciseId: string; exerciseName: string; variantName?: string };
   ActiveWorkout: { setup: WorkoutSetup; initialSet?: number; initialCompletedReps?: number; initialElapsedSeconds?: number };
   RestTimer: { setup: WorkoutSetup; completedSets: number; completedReps: number; elapsedSeconds: number };

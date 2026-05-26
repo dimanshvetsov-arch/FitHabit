@@ -7,10 +7,10 @@ import { MainTabParamList, RootStackParamList } from "@/types";
 import { ActiveWorkoutScreen } from "@/screens/ActiveWorkoutScreen";
 import { CalendarScreen } from "@/screens/CalendarScreen";
 import { ExerciseSelectionScreen } from "@/screens/ExerciseSelectionScreen";
+import { ExerciseDetailScreen } from "@/screens/ExerciseDetailScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { ProfileScreen } from "@/screens/ProfileScreen";
 import { ProgressScreen } from "@/screens/ProgressScreen";
-import { PushUpTypeScreen } from "@/screens/PushUpTypeScreen";
 import { RestTimerScreen } from "@/screens/RestTimerScreen";
 import { WorkoutSetupScreen } from "@/screens/WorkoutSetupScreen";
 import { WorkoutSummaryScreen } from "@/screens/WorkoutSummaryScreen";
@@ -69,7 +69,7 @@ export function RootNavigator() {
     >
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseSelection" component={ExerciseSelectionScreen} options={{ title: "Choose Exercise" }} />
-      <Stack.Screen name="PushUpType" component={PushUpTypeScreen} options={{ title: "Push-Up Type" }} />
+      <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: "Exercise Details" }} />
       <Stack.Screen name="WorkoutSetup" component={WorkoutSetupScreen} options={{ title: "Workout Setup" }} />
       <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RestTimer" component={RestTimerScreen} options={{ headerShown: false }} />
