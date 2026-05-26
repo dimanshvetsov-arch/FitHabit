@@ -16,8 +16,10 @@ import { formatDuration } from "@/utils/format";
 export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSummary">) {
   const { theme } = useThemeMode();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { addWorkout } = useWorkouts();
+  const { addWorkout, currentStreak, weeklyProgress, exerciseStats } = useWorkouts();
   const { record } = route.params;
+  const exerciseStat = exerciseStats[record.exerciseName];
+  const timesCompleted = Math.max(exerciseStat?.completionCount ?? 0, 1);
   const savedRef = useRef(false);
 
   useEffect(() => {
@@ -39,13 +41,18 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
       </View>
 
       <View style={styles.metrics}>
-        <MetricCard label="Total reps" value={`${record.totalReps}`} icon={Dumbbell} />
+        <MetricCard label={record.totalReps > 0 ? "Total reps" : "Duration"} value={record.totalReps > 0 ? `${record.totalReps}` : formatDuration(record.durationSeconds)} icon={Dumbbell} />
         <MetricCard label="Sets" value={`${record.completedSets}`} icon={Flame} color={theme.colors.orange} />
       </View>
       <View style={styles.metrics}>
         <MetricCard label="Minutes" value={`${record.totalMinutes}`} icon={Timer} color={theme.colors.green} />
         <MetricCard label="Calories" value={`${record.calories}`} icon={Award} color={theme.colors.secondary} />
       </View>
+      <View style={styles.metrics}>
+        <MetricCard label="Streak" value={`${currentStreak}d`} icon={Flame} color={theme.colors.orange} />
+        <MetricCard label="Weekly progress" value={`${weeklyProgress.percentage}%`} icon={Award} color={theme.colors.primary} />
+      </View>
+      <MetricCard label="Times completed" value={`${timesCompleted}`} icon={Dumbbell} color={theme.colors.green} />
 
       <AppButton title="Back to Dashboard" onPress={() => navigation.navigate("MainTabs")} />
     </AppScreen>

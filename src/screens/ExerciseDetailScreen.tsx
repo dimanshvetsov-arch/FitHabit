@@ -3,11 +3,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppScreen } from "@/components/AppScreen";
 import { ImageCard } from "@/components/ImageCard";
 import { exercises } from "@/data/mockData";
+import { useWorkouts } from "@/hooks/useWorkouts";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackScreenProps } from "@/types";
 
 export function ExerciseDetailScreen({ navigation, route }: RootStackScreenProps<"ExerciseDetail">) {
   const { theme } = useThemeMode();
+  const { exerciseStats } = useWorkouts();
   const exercise = exercises.find((item) => item.id === route.params.exerciseId);
 
   if (!exercise) {
@@ -17,12 +19,31 @@ export function ExerciseDetailScreen({ navigation, route }: RootStackScreenProps
       </AppScreen>
     );
   }
+  const stats = exerciseStats[exercise.name] ?? { completionCount: 0, totalReps: 0, totalSeconds: 0, totalMinutes: 0 };
 
   return (
     <AppScreen>
       <ImageCard title={exercise.name} subtitle={exercise.description} image={exercise.image} height={240} badge={exercise.category} />
 
       <View style={[styles.infoCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+        <View style={styles.infoRow}>
+          <View style={[styles.iconBox, { backgroundColor: `${theme.colors.orange}22` }]}>
+            <Dumbbell color={theme.colors.orange} size={20} />
+          </View>
+          <View style={styles.infoText}>
+            <Text style={[styles.label, { color: theme.colors.muted }]}>Completed</Text>
+            <Text style={[styles.value, { color: theme.colors.text }]}>{stats.completionCount} times</Text>
+          </View>
+        </View>
+        <View style={styles.infoRow}>
+          <View style={[styles.iconBox, { backgroundColor: `${theme.colors.secondary}22` }]}>
+            <Target color={theme.colors.secondary} size={20} />
+          </View>
+          <View style={styles.infoText}>
+            <Text style={[styles.label, { color: theme.colors.muted }]}>Total</Text>
+            <Text style={[styles.value, { color: theme.colors.text }]}>{exercise.trackingType === "timer_only" ? `${stats.totalMinutes} min` : `${stats.totalReps} reps`}</Text>
+          </View>
+        </View>
         <View style={styles.infoRow}>
           <View style={[styles.iconBox, { backgroundColor: `${theme.colors.primary}22` }]}>
             <Target color={theme.colors.primary} size={20} />

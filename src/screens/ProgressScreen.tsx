@@ -25,7 +25,7 @@ function Chart({ values, labels }: { values: number[]; labels: string[] }) {
 
 export function ProgressScreen() {
   const { theme } = useThemeMode();
-  const { stats, workouts, weeklyProgress } = useWorkouts();
+  const { stats, workouts, weeklyProgress, exerciseStats } = useWorkouts();
   const isNew = workouts.length === 0;
   const monthly = isNew ? [0, 0, 0, 0] : [25, 50, 75, Math.min(100, weeklyProgress.percentage)];
 
@@ -54,6 +54,13 @@ export function ProgressScreen() {
           {isNew ? "Complete a few workouts and FitHabit will surface your best training patterns here." : "Progress updates immediately after every completed workout."}
         </Text>
       </View>
+      <Text style={[styles.section, { color: theme.colors.text }]}>Exercise counters</Text>
+      {Object.entries(exerciseStats).slice(0, 6).map(([name, stat]) => (
+        <View key={name} style={[styles.insight, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <Target color={theme.colors.green} size={22} />
+          <Text style={[styles.insightText, { color: theme.colors.text }]}>{name}: {stat.completionCount} completions - {stat.totalMinutes} min</Text>
+        </View>
+      ))}
     </AppScreen>
   );
 }

@@ -3,13 +3,17 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { CalendarDays, Dumbbell, Home, LineChart, Settings } from "lucide-react-native";
 import { Platform } from "react-native";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
+import { useAuth } from "@/auth/AuthContext";
+import { useGoals } from "@/goals/GoalsContext";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { MainTabParamList, RootStackParamList } from "@/types";
 import { ActiveWorkoutScreen } from "@/screens/ActiveWorkoutScreen";
 import { CalendarScreen } from "@/screens/CalendarScreen";
 import { CalendarDayDetailScreen } from "@/screens/CalendarDayDetailScreen";
+import { CreateAccountScreen } from "@/screens/CreateAccountScreen";
 import { ExerciseSelectionScreen } from "@/screens/ExerciseSelectionScreen";
 import { ExerciseDetailScreen } from "@/screens/ExerciseDetailScreen";
+import { GoalsSetupScreen } from "@/screens/GoalsSetupScreen";
 import { HomeScreen } from "@/screens/HomeScreen";
 import { LegalScreen } from "@/screens/LegalScreen";
 import { ProfileEditScreen } from "@/screens/ProfileEditScreen";
@@ -62,9 +66,19 @@ function MainTabs() {
 
 export function RootNavigator() {
   const { theme } = useThemeMode();
+  const { user, loading: authLoading } = useAuth();
+  const { goals, loading: goalsLoading } = useGoals();
+
+  if (authLoading || goalsLoading) {
+    return null;
+  }
+
+  const initialRouteName = !user ? "CreateAccount" : !goals ? "GoalsSetup" : "MainTabs";
 
   return (
     <Stack.Navigator
+      key={initialRouteName}
+      initialRouteName={initialRouteName}
       screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.text,
@@ -73,6 +87,8 @@ export function RootNavigator() {
         headerLeft: () => <HeaderBackButton onPress={() => navigation.goBack()} />
       })}
     >
+      <Stack.Screen name="CreateAccount" component={CreateAccountScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="GoalsSetup" component={GoalsSetupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseSelection" component={ExerciseSelectionScreen} options={{ title: "Choose Exercise" }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: "Exercise Details" }} />

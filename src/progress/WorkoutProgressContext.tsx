@@ -1,8 +1,7 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useGoals } from "@/goals/GoalsContext";
 import { clearWorkoutData, loadWorkouts, saveWorkout } from "@/storage/workoutStorage";
 import { WorkoutRecord } from "@/types";
-
-const WEEKLY_GOAL = 5;
 
 type WorkoutStats = {
   totalWorkouts: number;
@@ -20,18 +19,30 @@ type WeeklyProgress = {
   chart: number[];
 };
 
+export type ExerciseStat = {
+  completionCount: number;
+  totalReps: number;
+  totalSeconds: number;
+  totalMinutes: number;
+  lastCompletedAt?: string;
+};
+
 type WorkoutProgressContextValue = {
   completedWorkouts: WorkoutRecord[];
   workouts: WorkoutRecord[];
   workoutHistory: WorkoutRecord[];
   calendarCompletedDays: string[];
+  completedWorkoutDates: string[];
   currentStreak: number;
+  lastWorkoutDate?: string;
   totalMinutesTrained: number;
   weeklyProgress: WeeklyProgress;
+  exerciseStats: Record<string, ExerciseStat>;
   stats: WorkoutStats;
   loading: boolean;
   refresh: () => Promise<void>;
   addWorkout: (record: WorkoutRecord) => Promise<void>;
+  completeWorkout: (record: WorkoutRecord) => Promise<void>;
   resetWorkouts: () => Promise<void>;
 };
 
@@ -74,7 +85,7 @@ function calculateStreak(workouts: WorkoutRecord[]) {
   return streak;
 }
 
-function calculateWeeklyProgress(workouts: WorkoutRecord[]): WeeklyProgress {
+function calculateWeeklyProgress(workouts: WorkoutRecord[], weeklyGoal: number): WeeklyProgress {
   const weekStart = startOfWeek(new Date());
   const chart = Array.from({ length: 7 }, () => 0);
   const completedIds = new Set<string>();
@@ -91,9 +102,9 @@ function calculateWeeklyProgress(workouts: WorkoutRecord[]): WeeklyProgress {
   const completed = completedIds.size;
   return {
     completed,
-    goal: WEEKLY_GOAL,
-    percentage: Math.min(100, Math.round((completed / WEEKLY_GOAL) * 100)),
-    chart: chart.map((value) => Math.min(100, Math.round((value / Math.max(1, WEEKLY_GOAL)) * 100)))
+    goal: weeklyGoal,
+    percentage: Math.min(100, Math.round((completed / weeklyGoal) * 100)),
+    chart: chart.map((value) => Math.min(100, Math.round((value / Math.max(1, weeklyGoal)) * 100)))
   };
 }
 
@@ -113,6 +124,7 @@ function normalizeWorkout(workout: WorkoutRecord): WorkoutRecord {
 }
 
 export function WorkoutProgressProvider({ children }: PropsWithChildren) {
+  const { goals } = useGoals();
   const [completedWorkouts, setCompletedWorkouts] = useState<WorkoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,10 +148,26 @@ export function WorkoutProgressProvider({ children }: PropsWithChildren) {
     setCompletedWorkouts([]);
   }, []);
 
-  const weeklyProgress = useMemo(() => calculateWeeklyProgress(completedWorkouts), [completedWorkouts]);
+  const weeklyGoal = goals?.weeklyWorkoutGoal ?? 5;
+  const weeklyProgress = useMemo(() => calculateWeeklyProgress(completedWorkouts, weeklyGoal), [completedWorkouts, weeklyGoal]);
   const calendarCompletedDays = useMemo(() => uniqueWorkoutDays(completedWorkouts), [completedWorkouts]);
+  const lastWorkoutDate = calendarCompletedDays.at(-1);
   const currentStreak = useMemo(() => calculateStreak(completedWorkouts), [completedWorkouts]);
   const totalMinutesTrained = useMemo(() => completedWorkouts.reduce((sum, workout) => sum + workout.totalMinutes, 0), [completedWorkouts]);
+  const exerciseStats = useMemo(() => {
+    return completedWorkouts.reduce<Record<string, ExerciseStat>>((acc, workout) => {
+      const key = workout.exerciseName;
+      const current = acc[key] ?? { completionCount: 0, totalReps: 0, totalSeconds: 0, totalMinutes: 0 };
+      acc[key] = {
+        completionCount: current.completionCount + 1,
+        totalReps: current.totalReps + workout.totalReps,
+        totalSeconds: current.totalSeconds + workout.durationSeconds,
+        totalMinutes: current.totalMinutes + workout.totalMinutes,
+        lastCompletedAt: !current.lastCompletedAt || workout.completedAt > current.lastCompletedAt ? workout.completedAt : current.lastCompletedAt
+      };
+      return acc;
+    }, {});
+  }, [completedWorkouts]);
 
   const stats = useMemo<WorkoutStats>(() => {
     const totalReps = completedWorkouts.reduce((sum, workout) => sum + workout.totalReps, 0);
@@ -160,16 +188,20 @@ export function WorkoutProgressProvider({ children }: PropsWithChildren) {
       workouts: completedWorkouts,
       workoutHistory: completedWorkouts,
       calendarCompletedDays,
+      completedWorkoutDates: calendarCompletedDays,
       currentStreak,
+      lastWorkoutDate,
       totalMinutesTrained,
       weeklyProgress,
+      exerciseStats,
       stats,
       loading,
       refresh,
       addWorkout,
+      completeWorkout: addWorkout,
       resetWorkouts
     }),
-    [addWorkout, calendarCompletedDays, completedWorkouts, currentStreak, loading, refresh, resetWorkouts, stats, totalMinutesTrained, weeklyProgress]
+    [addWorkout, calendarCompletedDays, completedWorkouts, currentStreak, exerciseStats, lastWorkoutDate, loading, refresh, resetWorkouts, stats, totalMinutesTrained, weeklyProgress]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

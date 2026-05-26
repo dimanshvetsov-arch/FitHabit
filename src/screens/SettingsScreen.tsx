@@ -1,8 +1,12 @@
 import * as Notifications from "expo-notifications";
-import { Download, RotateCcw, Trash2, User } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Camera, Download, RotateCcw, Trash2, User } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import { Alert, Image, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { useAuth } from "@/auth/AuthContext";
+import { MainGoal, useGoals } from "@/goals/GoalsContext";
 import { accentColors } from "@/theme/colors";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { AccentColor, FitnessLevel, usePreferences } from "@/preferences/PreferencesContext";
@@ -12,6 +16,8 @@ import { useThemeMode } from "@/theme/ThemeProvider";
 const levels: FitnessLevel[] = ["Beginner", "Intermediate", "Advanced"];
 const accents: AccentColor[] = ["Purple", "Blue", "Green", "Orange", "Red"];
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const fullDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const goals: MainGoal[] = ["Build muscle", "Lose weight", "Improve endurance", "Build discipline", "Stay healthy"];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { theme } = useThemeMode();
@@ -53,13 +59,60 @@ function NumberInput({ value, onChange, suffix }: { value: number; onChange: (va
 
 export function SettingsScreen({ navigation }: { navigation: { navigate: (screen: string) => void } }) {
   const { theme, toggleScheme } = useThemeMode();
-  const { preferences, updatePreference, updatePreferences, resetPreferences } = usePreferences();
+  const { preferences, updatePreference, resetPreferences } = usePreferences();
+  const { user, updateUsername, updateProfilePhoto, resetApp: resetAccount } = useAuth();
+  const { goals: userGoals, updateGoals, clearGoals } = useGoals();
   const { resetWorkouts } = useWorkouts();
+  const [username, setUsername] = useState(user?.username ?? "");
+  const [usernameError, setUsernameError] = useState("");
+
+  useEffect(() => {
+    setUsername(user?.username ?? "");
+  }, [user?.username]);
 
   const toggleDay = (day: string) => {
     const hasDay = preferences.preferredWorkoutDays.includes(day);
     const next = hasDay ? preferences.preferredWorkoutDays.filter((item) => item !== day) : [...preferences.preferredWorkoutDays, day];
     void updatePreference("preferredWorkoutDays", next);
+  };
+
+  const toggleGoalDay = (day: string) => {
+    if (!userGoals) return;
+    const hasDay = userGoals.preferredWorkoutDays.includes(day);
+    const next = hasDay ? userGoals.preferredWorkoutDays.filter((item) => item !== day) : [...userGoals.preferredWorkoutDays, day];
+    void updateGoals({ ...userGoals, preferredWorkoutDays: next });
+    void updatePreference("preferredWorkoutDays", next.map((item) => item.slice(0, 3)));
+  };
+
+  const saveUsername = async () => {
+    const result = await updateUsername(username);
+    if (!result.ok) {
+      setUsernameError(result.error ?? "Could not save username");
+      return;
+    }
+    setUsernameError("");
+    await updatePreference("userName", username.trim());
+  };
+
+  const chooseProfilePhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Gallery permission is required to choose a profile photo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85
+    });
+    if (!result.canceled) {
+      const uri = result.assets[0]?.uri;
+      if (uri) {
+        await updateProfilePhoto(uri);
+        await updatePreference("profilePhoto", uri);
+      }
+    }
   };
 
   const toggleDailyReminder = async (enabled: boolean) => {
@@ -91,7 +144,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
 
   const exportData = async () => {
     const workouts = await loadWorkouts();
-    await Share.share({ message: JSON.stringify({ preferences, workouts }, null, 2) });
+    await Share.share({ message: JSON.stringify({ account: user, goals: userGoals, preferences, workouts }, null, 2) });
   };
 
   const clearHistory = () => {
@@ -102,7 +155,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
   };
 
   const resetApp = () => {
-    Alert.alert("Reset app?", "This resets preferences and clears workout history.", [
+    Alert.alert("Reset app?", "This clears your account, settings, goals, workouts, streak, and exercise counters.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Reset",
@@ -110,6 +163,8 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
         onPress: async () => {
           await resetWorkouts();
           await resetPreferences();
+          await clearGoals();
+          await resetAccount();
         }
       }
     ]);
@@ -122,23 +177,67 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
       <Section title="Profile">
         <SettingRow label="User name">
           <TextInput
-            value={preferences.userName}
-            onChangeText={(value) => void updatePreference("userName", value)}
+            value={username}
+            onChangeText={(value) => {
+              setUsername(value);
+              setUsernameError("");
+            }}
             style={[styles.textInput, { color: theme.colors.text, borderColor: theme.colors.border }]}
           />
         </SettingRow>
+        {usernameError ? <Text style={[styles.error, { color: theme.colors.orange }]}>{usernameError}</Text> : null}
+        <AppButton title="Save username" variant="ghost" onPress={saveUsername} />
         <SettingRow label="Profile photo">
-          {preferences.profilePhoto ? <Image source={{ uri: preferences.profilePhoto }} style={styles.avatar} /> : <User color={theme.colors.muted} size={28} />}
+          {user?.profilePhoto || preferences.profilePhoto ? <Image source={{ uri: user?.profilePhoto || preferences.profilePhoto }} style={styles.avatar} /> : <User color={theme.colors.muted} size={28} />}
         </SettingRow>
+        <AppButton title="Choose Profile Photo" icon={Camera} variant="ghost" onPress={chooseProfilePhoto} />
         <AppButton title="Edit profile" variant="ghost" onPress={() => navigation.navigate("ProfileEdit")} />
         <View style={styles.segmentRow}>
           {levels.map((level) => (
-            <Pressable key={level} onPress={() => void updatePreference("fitnessLevel", level)} style={[styles.segment, { backgroundColor: preferences.fitnessLevel === level ? theme.colors.primary : theme.colors.cardSoft }]}>
+            <Pressable
+              key={level}
+              onPress={() => {
+                void updatePreference("fitnessLevel", level);
+                if (userGoals) void updateGoals({ ...userGoals, fitnessLevel: level });
+              }}
+              style={[styles.segment, { backgroundColor: preferences.fitnessLevel === level ? theme.colors.primary : theme.colors.cardSoft }]}
+            >
               <Text style={[styles.segmentText, { color: preferences.fitnessLevel === level ? "#fff" : theme.colors.muted }]}>{level}</Text>
             </Pressable>
           ))}
         </View>
       </Section>
+
+      {userGoals ? (
+        <Section title="Goals">
+          <SettingRow label="Main goal" value={userGoals.mainGoal} />
+          <View style={styles.segmentRow}>
+            {goals.map((goal) => (
+              <Pressable key={goal} onPress={() => void updateGoals({ ...userGoals, mainGoal: goal })} style={[styles.segment, { backgroundColor: userGoals.mainGoal === goal ? theme.colors.primary : theme.colors.cardSoft }]}>
+                <Text style={[styles.segmentText, { color: userGoals.mainGoal === goal ? "#fff" : theme.colors.muted }]}>{goal}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <SettingRow label="Weekly workout goal" value={`${userGoals.weeklyWorkoutGoal} workouts`} />
+          <View style={styles.segmentRow}>
+            {[2, 3, 4, 5, 6, 7].map((goal) => (
+              <Pressable key={goal} onPress={() => void updateGoals({ ...userGoals, weeklyWorkoutGoal: goal })} style={[styles.segment, { backgroundColor: userGoals.weeklyWorkoutGoal === goal ? theme.colors.primary : theme.colors.cardSoft }]}>
+                <Text style={[styles.segmentText, { color: userGoals.weeklyWorkoutGoal === goal ? "#fff" : theme.colors.muted }]}>{goal}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.dayGrid}>
+            {fullDays.map((day) => {
+              const active = userGoals.preferredWorkoutDays.includes(day);
+              return (
+                <Pressable key={day} onPress={() => toggleGoalDay(day)} style={[styles.day, { backgroundColor: active ? theme.colors.primary : theme.colors.cardSoft }]}>
+                  <Text style={[styles.dayText, { color: active ? "#fff" : theme.colors.muted }]}>{day.slice(0, 3)}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Section>
+      ) : null}
 
       <Section title="Workout Preferences">
         <SettingRow label="Default reps"><NumberInput value={preferences.defaultReps} onChange={(value) => void updatePreference("defaultReps", value)} /></SettingRow>
@@ -215,6 +314,7 @@ const styles = StyleSheet.create({
   rowText: { flex: 1 },
   rowLabel: { fontSize: 15, fontWeight: "900" },
   rowValue: { marginTop: 2, fontSize: 13, fontWeight: "700" },
+  error: { fontSize: 13, fontWeight: "800" },
   textInput: { minWidth: 150, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, minHeight: 42, fontWeight: "700" },
   timeInput: { width: 86, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, minHeight: 42, fontWeight: "800", textAlign: "center" },
   avatar: { width: 42, height: 42, borderRadius: 16 },

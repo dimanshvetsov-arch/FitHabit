@@ -51,6 +51,8 @@ export type WorkoutRecord = {
 };
 
 export type RootStackParamList = {
+  CreateAccount: undefined;
+  GoalsSetup: undefined;
   MainTabs: undefined;
   ExerciseSelection: undefined;
   ExerciseDetail: { exerciseId: string };

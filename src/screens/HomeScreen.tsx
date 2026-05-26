@@ -7,8 +7,10 @@ import { AppScreen } from "@/components/AppScreen";
 import { ImageCard } from "@/components/ImageCard";
 import { MetricCard } from "@/components/MetricCard";
 import { ProgressRing } from "@/components/ProgressRing";
+import { useAuth } from "@/auth/AuthContext";
 import { images } from "@/data/images";
 import { motivationalMessages } from "@/data/mockData";
+import { useGoals } from "@/goals/GoalsContext";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { usePreferences } from "@/preferences/PreferencesContext";
 import { useThemeMode } from "@/theme/ThemeProvider";
@@ -18,6 +20,8 @@ import { formatDuration, shortDate } from "@/utils/format";
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { theme } = useThemeMode();
+  const { user } = useAuth();
+  const { goals } = useGoals();
   const { preferences } = usePreferences();
   const { workouts, stats, weeklyProgress } = useWorkouts();
   const isNew = workouts.length === 0;
@@ -31,11 +35,11 @@ export function HomeScreen() {
     <AppScreen>
       <View style={styles.header}>
         <View>
-          <Text style={[styles.kicker, { color: theme.colors.muted }]}>Welcome back</Text>
+          <Text style={[styles.kicker, { color: theme.colors.muted }]}>Welcome back{user?.username ? `, ${user.username}` : ""}</Text>
           <Text style={[styles.title, { color: theme.colors.text }]}>{isNew ? "Let's begin" : "Ready to train?"}</Text>
         </View>
         <View style={[styles.level, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-          <Text style={[styles.levelText, { color: theme.colors.text }]}>New</Text>
+          <Text style={[styles.levelText, { color: theme.colors.text }]}>{goals?.fitnessLevel ?? "New"}</Text>
         </View>
       </View>
 
