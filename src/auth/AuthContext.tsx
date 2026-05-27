@@ -10,156 +10,205 @@ export type UserAccount = {
   createdAt: string;
 };
 
+type CurrentUserSession = {
+  id: string;
+  username: string;
+};
+
+type AuthResult = { ok: boolean; error?: string };
+
 type AuthContextValue = {
   user: UserAccount | null;
   currentUser: UserAccount | null;
   usedUsernames: string[];
   loading: boolean;
-  createAccount: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  loadAuthState: () => Promise<void>;
+  createAccount: (username: string, password: string) => Promise<AuthResult>;
+  login: (username: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   resetApp: () => Promise<void>;
-  updateUsername: (username: string) => Promise<{ ok: boolean; error?: string }>;
+  updateUsername: (username: string) => Promise<AuthResult>;
   updateProfilePhoto: (uri: string) => Promise<void>;
 };
 
-export const ACCOUNT_KEY = legacyStorageKeys.account;
 export const ACCOUNTS_KEY = storageKeys.auth;
-export const SESSION_KEY = storageKeys.currentUser;
-export const USED_USERNAMES_KEY = `${storageKeys.auth}:usedUsernames`;
-const mockUsedUsernames = ["max", "alex", "fitking"];
+export const CURRENT_USER_KEY = storageKeys.currentUser;
 
+const mockUsedUsernames = ["max", "alex", "fitking"];
 const Context = createContext<AuthContextValue | null>(null);
 
 function normalizeUsername(username: string) {
   return username.trim().toLowerCase();
 }
 
-function validateUsername(username: string, used: string[], current?: string) {
+function sessionFor(account: UserAccount): CurrentUserSession {
+  return { id: account.id, username: account.username };
+}
+
+function validateUsername(username: string, accounts: UserAccount[], currentId?: string) {
   const normalized = normalizeUsername(username);
   if (!normalized) return "Username cannot be empty";
   if (normalized.length < 3) return "Username must be at least 3 characters";
-  if (normalized !== normalizeUsername(current ?? "") && used.map(normalizeUsername).includes(normalized)) {
+  if (accounts.some((account) => account.id !== currentId && normalizeUsername(account.username) === normalized)) {
+    return "This username is already taken";
+  }
+  if (!currentId && mockUsedUsernames.includes(normalized)) {
     return "This username is already taken";
   }
   return undefined;
 }
 
+async function readAccounts() {
+  const stored = await AsyncStorage.getItem(ACCOUNTS_KEY);
+  if (stored) return JSON.parse(stored) as UserAccount[];
+
+  const legacyAccounts = await AsyncStorage.getItem(legacyStorageKeys.auth) ?? await AsyncStorage.getItem(legacyStorageKeys.accounts);
+  if (legacyAccounts) {
+    const parsed = JSON.parse(legacyAccounts) as UserAccount[];
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(parsed));
+    return parsed;
+  }
+
+  const legacyAccount = await AsyncStorage.getItem(legacyStorageKeys.account);
+  if (legacyAccount) {
+    const parsed = [JSON.parse(legacyAccount) as UserAccount];
+    await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(parsed));
+    return parsed;
+  }
+
+  return [];
+}
+
+async function readCurrentSession() {
+  const stored = await AsyncStorage.getItem(CURRENT_USER_KEY);
+  if (!stored) return null;
+  const parsed = JSON.parse(stored) as CurrentUserSession | string;
+  return typeof parsed === "string" ? { id: parsed, username: "" } : parsed;
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<UserAccount | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
-  const [usedUsernames, setUsedUsernames] = useState<string[]>(mockUsedUsernames);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void Promise.all([
-      AsyncStorage.getItem(ACCOUNT_KEY),
-      AsyncStorage.getItem(ACCOUNTS_KEY),
-      AsyncStorage.getItem(legacyStorageKeys.accounts),
-      AsyncStorage.getItem(SESSION_KEY),
-      AsyncStorage.getItem(legacyStorageKeys.currentUser),
-      AsyncStorage.getItem(USED_USERNAMES_KEY),
-      AsyncStorage.getItem(legacyStorageKeys.usedUsernames)
-    ]).then(async ([storedUser, storedAccounts, legacyAccounts, storedSession, legacySession, storedNames, legacyNames]) => {
-      const legacyUser = storedUser ? (JSON.parse(storedUser) as UserAccount) : null;
-      const savedAccounts = storedAccounts ? (JSON.parse(storedAccounts) as UserAccount[]) : legacyAccounts ? (JSON.parse(legacyAccounts) as UserAccount[]) : legacyUser ? [legacyUser] : [];
-      const sessionId = storedSession ? (JSON.parse(storedSession) as string) : legacySession ? (JSON.parse(legacySession) as string) : undefined;
-      const sessionUser = savedAccounts.find((account) => account.id === sessionId) ?? null;
-      setAccounts(savedAccounts);
-      setUser(sessionUser);
-      const names = savedAccounts.map((account) => account.username);
-      if (storedNames) names.push(...(JSON.parse(storedNames) as string[]));
-      if (legacyNames) names.push(...(JSON.parse(legacyNames) as string[]));
-      setUsedUsernames(Array.from(new Set([...mockUsedUsernames, ...names].map(normalizeUsername))));
-      if (!storedAccounts && savedAccounts.length) await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(savedAccounts));
-      if (!storedSession && sessionUser) await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser.id));
-      setLoading(false);
-    });
+  const usedUsernames = useMemo(() => Array.from(new Set([...mockUsedUsernames, ...accounts.map((account) => normalizeUsername(account.username))])), [accounts]);
+
+  const loadAuthState = useCallback(async () => {
+    setLoading(true);
+    const savedAccounts = await readAccounts();
+    const session = await readCurrentSession();
+    const sessionAccount = session ? savedAccounts.find((account) => account.id === session.id || normalizeUsername(account.username) === normalizeUsername(session.username)) ?? null : null;
+    setAccounts(savedAccounts);
+    setCurrentUser(sessionAccount);
+    setLoading(false);
   }, []);
 
-  const persistAccounts = useCallback(async (next: UserAccount[]) => {
+  useEffect(() => {
+    void loadAuthState();
+  }, [loadAuthState]);
+
+  const saveAccounts = useCallback(async (next: UserAccount[]) => {
     setAccounts(next);
     await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next));
   }, []);
 
-  const persistSession = useCallback(async (next: UserAccount | null) => {
-    setUser(next);
-    if (next) {
-      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next.id));
+  const saveCurrentUser = useCallback(async (account: UserAccount | null) => {
+    setCurrentUser(account);
+    if (account) {
+      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(sessionFor(account)));
     } else {
-      await AsyncStorage.multiRemove([SESSION_KEY, legacyStorageKeys.currentUser, ACCOUNT_KEY]);
+      await AsyncStorage.removeItem(CURRENT_USER_KEY);
     }
-  }, []);
-
-  const persistUsed = useCallback(async (names: string[]) => {
-    const next = Array.from(new Set(names.map(normalizeUsername)));
-    setUsedUsernames(next);
-    await AsyncStorage.setItem(USED_USERNAMES_KEY, JSON.stringify(next));
   }, []);
 
   const createAccount = useCallback(
     async (username: string, password: string) => {
-      const usernameError = validateUsername(username, usedUsernames);
+      const savedAccounts = await readAccounts();
+      const usernameError = validateUsername(username, savedAccounts);
       if (usernameError) return { ok: false, error: usernameError };
       if (!password) return { ok: false, error: "Password cannot be empty" };
       if (password.length < 6) return { ok: false, error: "Password must be at least 6 characters" };
-      const next: UserAccount = { id: Date.now().toString(), username: username.trim(), password, createdAt: new Date().toISOString() };
-      await persistAccounts([...accounts, next]);
-      await persistSession(next);
-      await persistUsed([...usedUsernames, username]);
+
+      const account: UserAccount = {
+        id: `user_${Date.now()}`,
+        username: username.trim(),
+        password,
+        createdAt: new Date().toISOString()
+      };
+      const nextAccounts = [...savedAccounts, account];
+      await saveAccounts(nextAccounts);
+      await saveCurrentUser(account);
       return { ok: true };
     },
-    [accounts, persistAccounts, persistSession, persistUsed, usedUsernames]
+    [saveAccounts, saveCurrentUser]
   );
 
   const login = useCallback(
     async (username: string, password: string) => {
-      const account = accounts.find((item) => normalizeUsername(item.username) === normalizeUsername(username));
+      const savedAccounts = await readAccounts();
+      const account = savedAccounts.find((item) => normalizeUsername(item.username) === normalizeUsername(username));
       if (!account || account.password !== password) {
         return { ok: false, error: "Incorrect username or password" };
       }
-      await persistSession(account);
+      setAccounts(savedAccounts);
+      await saveCurrentUser(account);
       return { ok: true };
     },
-    [accounts, persistSession]
+    [saveCurrentUser]
   );
+
+  const logout = useCallback(async () => {
+    await saveCurrentUser(null);
+  }, [saveCurrentUser]);
+
+  const resetApp = useCallback(async () => {
+    await AsyncStorage.clear();
+    setAccounts([]);
+    setCurrentUser(null);
+  }, []);
 
   const updateUsername = useCallback(
     async (username: string) => {
-      if (!user) return { ok: false, error: "No account found" };
-      const usernameError = validateUsername(username, usedUsernames, user.username);
+      if (!currentUser) return { ok: false, error: "No account found" };
+      const savedAccounts = await readAccounts();
+      const usernameError = validateUsername(username, savedAccounts, currentUser.id);
       if (usernameError) return { ok: false, error: usernameError };
-      const next = { ...user, username: username.trim() };
-      await persistAccounts(accounts.map((account) => account.id === next.id ? next : account));
-      await persistSession(next);
-      await persistUsed([...usedUsernames, username]);
+      const nextUser = { ...currentUser, username: username.trim() };
+      const nextAccounts = savedAccounts.map((account) => account.id === nextUser.id ? nextUser : account);
+      await saveAccounts(nextAccounts);
+      await saveCurrentUser(nextUser);
       return { ok: true };
     },
-    [accounts, persistAccounts, persistSession, persistUsed, usedUsernames, user]
+    [currentUser, saveAccounts, saveCurrentUser]
   );
 
   const updateProfilePhoto = useCallback(
     async (uri: string) => {
-      if (!user) return;
-      const next = { ...user, profilePhoto: uri };
-      await persistAccounts(accounts.map((account) => account.id === next.id ? next : account));
-      await persistSession(next);
+      if (!currentUser) return;
+      const savedAccounts = await readAccounts();
+      const nextUser = { ...currentUser, profilePhoto: uri };
+      const nextAccounts = savedAccounts.map((account) => account.id === nextUser.id ? nextUser : account);
+      await saveAccounts(nextAccounts);
+      await saveCurrentUser(nextUser);
     },
-    [accounts, persistAccounts, persistSession, user]
+    [currentUser, saveAccounts, saveCurrentUser]
   );
 
-  const logout = useCallback(async () => persistSession(null), [persistSession]);
-
-  const resetApp = useCallback(async () => {
-    await AsyncStorage.clear();
-    setUser(null);
-    setAccounts([]);
-    setUsedUsernames(mockUsedUsernames);
-  }, []);
-
   const value = useMemo(
-    () => ({ user, currentUser: user, usedUsernames, loading, createAccount, login, logout, resetApp, updateUsername, updateProfilePhoto }),
-    [createAccount, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames, user]
+    () => ({
+      user: currentUser,
+      currentUser,
+      usedUsernames,
+      loading,
+      loadAuthState,
+      createAccount,
+      login,
+      logout,
+      resetApp,
+      updateUsername,
+      updateProfilePhoto
+    }),
+    [createAccount, currentUser, loadAuthState, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

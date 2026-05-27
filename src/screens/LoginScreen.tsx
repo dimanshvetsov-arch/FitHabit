@@ -5,14 +5,11 @@ import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/auth/AuthContext";
-import { useGoals } from "@/goals/GoalsContext";
-import { RootStackScreenProps } from "@/types";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
-export function LoginScreen({ navigation }: RootStackScreenProps<"Login">) {
+export function LoginScreen() {
   const { theme } = useThemeMode();
   const { login } = useAuth();
-  const { goals } = useGoals();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,7 +21,6 @@ export function LoginScreen({ navigation }: RootStackScreenProps<"Login">) {
       setError(result.error ?? "Incorrect username or password");
       return;
     }
-    navigation.replace(goals ? "MainTabs" : "GoalsSetup");
   };
 
   return (

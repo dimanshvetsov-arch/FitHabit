@@ -1,5 +1,5 @@
 export const storageKeys = {
-  auth: "@auth",
+  auth: "@accounts",
   currentUser: "@currentUser",
   settings: "@settings",
   goals: "@goals",
@@ -10,6 +10,7 @@ export const storageKeys = {
 
 export const legacyStorageKeys = {
   account: "fithabit:account:v1",
+  auth: "@auth",
   accounts: "fithabit:accounts:v1",
   currentUser: "fithabit:session:v1",
   usedUsernames: "fithabit:used-usernames:v1",

@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { CalendarDays, Dumbbell, Home, LineChart, Settings } from "lucide-react-native";
-import { Platform } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { useAuth } from "@/auth/AuthContext";
 import { useGoals } from "@/goals/GoalsContext";
@@ -68,14 +68,18 @@ function MainTabs() {
 
 export function RootNavigator() {
   const { theme } = useThemeMode();
-  const { user, loading: authLoading } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const { goals, loading: goalsLoading } = useGoals();
 
   if (authLoading || goalsLoading) {
-    return null;
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background }}>
+        <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "900" }}>FitHabit</Text>
+      </View>
+    );
   }
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <Stack.Navigator
         key="auth"

@@ -4,10 +4,9 @@ import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useAuth } from "@/auth/AuthContext";
-import { RootStackScreenProps } from "@/types";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
-export function CreateAccountScreen({ navigation }: RootStackScreenProps<"CreateAccount">) {
+export function CreateAccountScreen() {
   const { theme } = useThemeMode();
   const { createAccount } = useAuth();
   const [username, setUsername] = useState("");
@@ -26,7 +25,6 @@ export function CreateAccountScreen({ navigation }: RootStackScreenProps<"Create
       setError(result.error ?? "Could not create account");
       return;
     }
-    navigation.replace("GoalsSetup");
   };
 
   return (
