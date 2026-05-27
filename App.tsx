@@ -7,6 +7,7 @@ import { AuthProvider } from "@/auth/AuthContext";
 import { GoalsProvider } from "@/goals/GoalsContext";
 import { PreferencesProvider } from "@/preferences/PreferencesContext";
 import { WorkoutProgressProvider } from "@/progress/WorkoutProgressContext";
+import { RoutineProvider } from "@/routine/RoutineContext";
 import { ThemeProvider, useThemeMode } from "@/theme/ThemeProvider";
 import { RootNavigator } from "@/navigation/RootNavigator";
 
@@ -46,11 +47,13 @@ export default function App() {
     <AuthProvider>
       <GoalsProvider>
         <PreferencesProvider>
-          <WorkoutProgressProvider>
-            <ThemeProvider>
-              <AppShell />
-            </ThemeProvider>
-          </WorkoutProgressProvider>
+          <RoutineProvider>
+            <WorkoutProgressProvider>
+              <ThemeProvider>
+                <AppShell />
+              </ThemeProvider>
+            </WorkoutProgressProvider>
+          </RoutineProvider>
         </PreferencesProvider>
       </GoalsProvider>
     </AuthProvider>

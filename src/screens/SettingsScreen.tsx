@@ -139,7 +139,7 @@ export function SettingsScreen({ navigation }: { navigation: { navigate: (screen
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.scheduleNotificationAsync({
         content: { title: "FitHabit reminder", body: "Time for today's workout." },
-        trigger: { hour: hour || 18, minute: minute || 0, repeats: true }
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: hour || 18, minute: minute || 0 }
       });
     }
   };

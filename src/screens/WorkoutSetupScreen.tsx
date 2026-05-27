@@ -71,14 +71,14 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
   const trackingType = exercise?.trackingType ?? "reps_sets";
   const exerciseName = route.params.variantName ?? route.params.exerciseName;
 
-  const [reps, setReps] = useState(preferences.defaultReps);
-  const [sets, setSets] = useState(preferences.defaultSets);
-  const [restSeconds, setRestSeconds] = useState(preferences.defaultRestSeconds);
-  const [durationSeconds, setDurationSeconds] = useState(trackingType === "timer_only" ? preferences.defaultPlankSeconds : 30);
-  const [rounds, setRounds] = useState(3);
-  const [distance, setDistance] = useState("3");
-  const [goalMinutes, setGoalMinutes] = useState("25");
-  const [repsGoal, setRepsGoal] = useState(60);
+  const [reps, setReps] = useState(route.params.targetReps ?? preferences.defaultReps);
+  const [sets, setSets] = useState(route.params.targetSets ?? preferences.defaultSets);
+  const [restSeconds, setRestSeconds] = useState(route.params.restSeconds ?? preferences.defaultRestSeconds);
+  const [durationSeconds, setDurationSeconds] = useState(route.params.durationSeconds ?? (trackingType === "timer_only" ? preferences.defaultPlankSeconds : 30));
+  const [rounds, setRounds] = useState(route.params.rounds ?? 3);
+  const [distance, setDistance] = useState(String(route.params.distance ?? 3));
+  const [goalMinutes, setGoalMinutes] = useState(String(Math.round((route.params.goalTimeSeconds ?? 1500) / 60)));
+  const [repsGoal, setRepsGoal] = useState(route.params.repsGoal ?? 60);
   const [weight, setWeight] = useState(0);
   const [notes, setNotes] = useState("");
 
@@ -107,7 +107,9 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
       rounds: effectiveSets,
       distance: distanceValue,
       goalTimeSeconds,
-      repsGoal: trackingType === "reps_timer" ? repsGoal : undefined
+      repsGoal: trackingType === "reps_timer" ? repsGoal : undefined,
+      routineDate: route.params.routineDate,
+      routineItemId: route.params.routineItemId
     };
 
     void actionFeedback("start");

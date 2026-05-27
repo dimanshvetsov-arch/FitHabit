@@ -88,7 +88,9 @@ export function ActiveWorkoutScreen({ navigation, route }: RootStackScreenProps<
       targetReps: setup.reps,
       targetSets: setup.sets,
       durationSeconds,
-      calories: Math.max(24, Math.round(totalReps * 0.7 + durationSeconds / 50 + (setup.distance ?? 0) * 55))
+      calories: Math.max(24, Math.round(totalReps * 0.7 + durationSeconds / 50 + (setup.distance ?? 0) * 55)),
+      routineDate: setup.routineDate,
+      routineItemId: setup.routineItemId
     };
     navigation.replace("WorkoutSummary", { record });
   };

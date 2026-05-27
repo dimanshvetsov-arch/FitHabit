@@ -32,6 +32,8 @@ export type WorkoutSetup = {
   distance?: number;
   goalTimeSeconds?: number;
   repsGoal?: number;
+  routineDate?: string;
+  routineItemId?: string;
 };
 
 export type WorkoutRecord = {
@@ -48,6 +50,8 @@ export type WorkoutRecord = {
   targetSets: number;
   durationSeconds: number;
   calories: number;
+  routineDate?: string;
+  routineItemId?: string;
 };
 
 export type RootStackParamList = {
@@ -58,7 +62,21 @@ export type RootStackParamList = {
   MainTabs: undefined;
   ExerciseSelection: undefined;
   ExerciseDetail: { exerciseId: string };
-  WorkoutSetup: { exerciseId: string; exerciseName: string; variantName?: string };
+  WorkoutSetup: {
+    exerciseId: string;
+    exerciseName: string;
+    variantName?: string;
+    routineDate?: string;
+    routineItemId?: string;
+    targetReps?: number;
+    targetSets?: number;
+    restSeconds?: number;
+    durationSeconds?: number;
+    rounds?: number;
+    distance?: number;
+    goalTimeSeconds?: number;
+    repsGoal?: number;
+  };
   ActiveWorkout: { setup: WorkoutSetup; initialSet?: number; initialCompletedReps?: number; initialElapsedSeconds?: number };
   RestTimer: { setup: WorkoutSetup; completedSets: number; completedReps: number; elapsedSeconds: number };
   WorkoutSummary: { record: WorkoutRecord };

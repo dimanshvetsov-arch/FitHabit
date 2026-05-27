@@ -8,6 +8,7 @@ import { AppScreen } from "@/components/AppScreen";
 import { HeaderBackButton } from "@/components/HeaderBackButton";
 import { MetricCard } from "@/components/MetricCard";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { useRoutine } from "@/routine/RoutineContext";
 import { actionFeedback } from "@/services/feedback";
 import { useThemeMode } from "@/theme/ThemeProvider";
 import { RootStackParamList, RootStackScreenProps } from "@/types";
@@ -50,6 +51,7 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
   const { theme } = useThemeMode();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { addWorkout, workouts, weeklyProgress, exerciseStats } = useWorkouts();
+  const { markRoutineItemCompleted } = useRoutine();
   const { record } = route.params;
   const exerciseStat = exerciseStats[record.exerciseName];
   const timesCompleted = Math.max(exerciseStat?.completionCount ?? 0, 1);
@@ -64,8 +66,11 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
     if (savedRef.current) return;
     savedRef.current = true;
     void addWorkout(record);
+    if (record.routineDate && record.routineItemId) {
+      void markRoutineItemCompleted(record.routineDate, record.routineItemId, true);
+    }
     void actionFeedback("success");
-  }, [addWorkout, record]);
+  }, [addWorkout, markRoutineItemCompleted, record]);
 
   return (
     <AppScreen contentStyle={styles.content}>
