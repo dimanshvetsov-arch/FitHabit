@@ -2,17 +2,18 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AppButton } from "@/components/AppButton";
 import { AppScreen } from "@/components/AppScreen";
+import { useAuth } from "@/auth/AuthContext";
 import { MainGoal, useGoals } from "@/goals/GoalsContext";
 import { usePreferences, FitnessLevel } from "@/preferences/PreferencesContext";
-import { RootStackScreenProps } from "@/types";
 import { useThemeMode } from "@/theme/ThemeProvider";
 
 const mainGoals: MainGoal[] = ["Build muscle", "Lose weight", "Improve endurance", "Build discipline", "Stay healthy"];
 const levels: FitnessLevel[] = ["Beginner", "Intermediate", "Advanced"];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-export function GoalsSetupScreen({ navigation }: RootStackScreenProps<"GoalsSetup">) {
+export function GoalsSetupScreen() {
   const { theme } = useThemeMode();
+  const { completeOnboarding } = useAuth();
   const { updateGoals } = useGoals();
   const { updatePreferences } = usePreferences();
   const [mainGoal, setMainGoal] = useState<MainGoal>("Build discipline");
@@ -27,7 +28,7 @@ export function GoalsSetupScreen({ navigation }: RootStackScreenProps<"GoalsSetu
   const finish = async () => {
     await updateGoals({ mainGoal, weeklyWorkoutGoal, fitnessLevel, preferredWorkoutDays });
     await updatePreferences({ fitnessLevel, preferredWorkoutDays: preferredWorkoutDays.map((day) => day.slice(0, 3)), defaultSets: Math.max(2, Math.min(weeklyWorkoutGoal, 5)) });
-    navigation.replace("MainTabs");
+    await completeOnboarding();
   };
 
   return (

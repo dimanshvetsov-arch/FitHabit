@@ -7,6 +7,7 @@ export type UserAccount = {
   username: string;
   password: string;
   profilePhoto?: string;
+  onboardingCompleted: boolean;
   createdAt: string;
 };
 
@@ -27,6 +28,7 @@ type AuthContextValue = {
   login: (username: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   resetApp: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
   updateUsername: (username: string) => Promise<AuthResult>;
   updateProfilePhoto: (uri: string) => Promise<void>;
 };
@@ -60,18 +62,18 @@ function validateUsername(username: string, accounts: UserAccount[], currentId?:
 
 async function readAccounts() {
   const stored = await AsyncStorage.getItem(ACCOUNTS_KEY);
-  if (stored) return JSON.parse(stored) as UserAccount[];
+  if (stored) return (JSON.parse(stored) as UserAccount[]).map((account) => ({ ...account, onboardingCompleted: Boolean(account.onboardingCompleted) }));
 
   const legacyAccounts = await AsyncStorage.getItem(legacyStorageKeys.auth) ?? await AsyncStorage.getItem(legacyStorageKeys.accounts);
   if (legacyAccounts) {
-    const parsed = JSON.parse(legacyAccounts) as UserAccount[];
+    const parsed = (JSON.parse(legacyAccounts) as UserAccount[]).map((account) => ({ ...account, onboardingCompleted: Boolean(account.onboardingCompleted) }));
     await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(parsed));
     return parsed;
   }
 
   const legacyAccount = await AsyncStorage.getItem(legacyStorageKeys.account);
   if (legacyAccount) {
-    const parsed = [JSON.parse(legacyAccount) as UserAccount];
+    const parsed = [{ ...(JSON.parse(legacyAccount) as UserAccount), onboardingCompleted: false }];
     await AsyncStorage.setItem(ACCOUNTS_KEY, JSON.stringify(parsed));
     return parsed;
   }
@@ -133,6 +135,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         id: `user_${Date.now()}`,
         username: username.trim(),
         password,
+        onboardingCompleted: false,
         createdAt: new Date().toISOString()
       };
       const nextAccounts = [...savedAccounts, account];
@@ -166,6 +169,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setAccounts([]);
     setCurrentUser(null);
   }, []);
+
+  const completeOnboarding = useCallback(async () => {
+    if (!currentUser) return;
+    const savedAccounts = await readAccounts();
+    const nextUser = { ...currentUser, onboardingCompleted: true };
+    const nextAccounts = savedAccounts.map((account) => account.id === nextUser.id ? nextUser : account);
+    await saveAccounts(nextAccounts);
+    await saveCurrentUser(nextUser);
+  }, [currentUser, saveAccounts, saveCurrentUser]);
 
   const updateUsername = useCallback(
     async (username: string) => {
@@ -205,10 +217,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       resetApp,
+      completeOnboarding,
       updateUsername,
       updateProfilePhoto
     }),
-    [createAccount, currentUser, loadAuthState, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames]
+    [completeOnboarding, createAccount, currentUser, loadAuthState, loading, login, logout, resetApp, updateProfilePhoto, updateUsername, usedUsernames]
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

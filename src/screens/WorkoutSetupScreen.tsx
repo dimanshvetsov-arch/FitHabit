@@ -60,7 +60,7 @@ function trackingCopy(type: TrackingType) {
     case "reps_timer":
       return "Choose timed rounds and an optional rep goal.";
     default:
-      return "Choose reps, sets, rest time, and notes.";
+      return "Choose set duration, number of sets, rest time, and notes.";
   }
 }
 
@@ -93,7 +93,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
     const distanceValue = Math.max(0, Number(distance) || 0);
     const goalTimeSeconds = Math.max(60, (Number(goalMinutes) || 0) * 60);
     const effectiveSets = trackingType === "reps_sets" ? sets : trackingType === "distance_time" ? 1 : rounds;
-    const effectiveReps = trackingType === "reps_sets" ? reps : trackingType === "reps_timer" ? repsGoal : 1;
+    const effectiveReps = trackingType === "reps_sets" || trackingType === "reps_timer" ? 0 : 1;
     const setup: WorkoutSetup = {
       exerciseId: route.params.exerciseId,
       exerciseName: route.params.exerciseName,
@@ -129,7 +129,7 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
 
       {trackingType === "reps_sets" ? (
         <>
-          <Stepper label="Reps per set" value={reps} min={1} step={1} onChange={setReps} />
+          <Stepper label="Set duration" value={durationSeconds} min={10} step={5} onChange={setDurationSeconds} displayValue={formatDuration(durationSeconds)} />
           <Stepper label="Sets" value={sets} min={1} step={1} onChange={setSets} />
           <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
           {exercise?.category === "Gym" ? <Stepper label={`Training weight (${preferences.weightUnit})`} value={weight} min={0} step={5} onChange={setWeight} unit={preferences.weightUnit} /> : null}
@@ -170,7 +170,6 @@ export function WorkoutSetupScreen({ navigation, route }: RootStackScreenProps<"
       {trackingType === "reps_timer" ? (
         <>
           <Stepper label="Duration" value={durationSeconds} min={10} step={5} onChange={setDurationSeconds} displayValue={formatDuration(durationSeconds)} />
-          <Stepper label="Optional reps goal" value={repsGoal} min={0} step={5} onChange={setRepsGoal} />
           <Stepper label="Rounds" value={rounds} min={1} step={1} onChange={setRounds} />
           <Stepper label="Rest timer" value={restSeconds} unit="s" min={15} step={15} onChange={setRestSeconds} />
         </>

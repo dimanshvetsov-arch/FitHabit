@@ -60,6 +60,8 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
   const weekStart = startOfWeek(new Date());
   const displayWeeklyCompleted = new Set(displayWorkouts.filter((workout) => new Date(workout.completedAt) >= weekStart).map((workout) => workout.id)).size;
   const displayWeeklyPercentage = Math.min(100, Math.round((displayWeeklyCompleted / Math.max(1, weeklyProgress.goal)) * 100));
+  const repsBySet = record.repsBySet ?? [];
+  const completedRounds = record.setsCompleted ?? record.roundsCompleted ?? record.completedSets;
   const savedRef = useRef(false);
 
   useEffect(() => {
@@ -84,8 +86,8 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
       </View>
 
       <View style={styles.metrics}>
-        <MetricCard label={record.totalReps > 0 ? "Total reps" : "Duration"} value={record.totalReps > 0 ? `${record.totalReps}` : formatDuration(record.durationSeconds)} icon={Dumbbell} />
-        <MetricCard label="Sets" value={`${record.completedSets}`} icon={Flame} color={theme.colors.orange} />
+        <MetricCard label={record.totalReps > 0 ? "Total reps" : "Duration"} value={record.totalReps > 0 ? `${record.totalReps}` : formatDuration(record.totalSeconds ?? record.durationSeconds)} icon={Dumbbell} />
+        <MetricCard label={record.totalReps > 0 ? "Sets" : "Rounds"} value={`${completedRounds}`} icon={Flame} color={theme.colors.orange} />
       </View>
       <View style={styles.metrics}>
         <MetricCard label="Minutes" value={`${record.totalMinutes}`} icon={Timer} color={theme.colors.green} />
@@ -96,6 +98,18 @@ export function WorkoutSummaryScreen({ route }: RootStackScreenProps<"WorkoutSum
         <MetricCard label="Weekly progress" value={`${displayWeeklyPercentage}%`} icon={Award} color={theme.colors.primary} />
       </View>
       <MetricCard label="Times completed" value={`${timesCompleted}`} icon={Dumbbell} color={theme.colors.green} />
+
+      {repsBySet.length > 0 ? (
+        <View style={[styles.breakdown, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+          <Text style={[styles.breakdownTitle, { color: theme.colors.text }]}>Reps by set</Text>
+          {repsBySet.map((reps, index) => (
+            <View key={`${record.id}-${index}`} style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: theme.colors.muted }]}>Set {index + 1}</Text>
+              <Text style={[styles.breakdownValue, { color: theme.colors.text }]}>{reps} reps</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <AppButton title="Back to Dashboard" onPress={() => navigation.navigate("MainTabs")} />
     </AppScreen>
@@ -133,5 +147,28 @@ const styles = StyleSheet.create({
   metrics: {
     flexDirection: "row",
     gap: 12
+  },
+  breakdown: {
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: 16,
+    gap: 10
+  },
+  breakdownTitle: {
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  breakdownLabel: {
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  breakdownValue: {
+    fontSize: 15,
+    fontWeight: "900"
   }
 });

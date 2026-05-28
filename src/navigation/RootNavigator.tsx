@@ -99,7 +99,7 @@ export function RootNavigator() {
     );
   }
 
-  const initialRouteName = !goals ? "GoalsSetup" : "MainTabs";
+  const initialRouteName = !currentUser.onboardingCompleted ? "GoalsSetup" : "MainTabs";
 
   return (
     <Stack.Navigator

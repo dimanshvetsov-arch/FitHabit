@@ -1,4 +1,5 @@
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/auth/AuthContext";
 import { useGoals } from "@/goals/GoalsContext";
 import { clearWorkoutData, loadWorkouts, saveWorkout } from "@/storage/workoutStorage";
 import { WorkoutRecord } from "@/types";
@@ -136,24 +137,27 @@ function normalizeWorkout(workout: WorkoutRecord): WorkoutRecord {
 }
 
 export function WorkoutProgressProvider({ children }: PropsWithChildren) {
+  const { currentUser } = useAuth();
   const { goals } = useGoals();
   const [completedWorkouts, setCompletedWorkouts] = useState<WorkoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    setCompletedWorkouts((await loadWorkouts()).map(normalizeWorkout));
+    const allWorkouts = (await loadWorkouts()).map(normalizeWorkout);
+    setCompletedWorkouts(currentUser ? allWorkouts.filter((workout) => workout.userId === currentUser.id) : []);
     setLoading(false);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const addWorkout = useCallback(async (record: WorkoutRecord) => {
-    const next = (await saveWorkout(normalizeWorkout(record))).map(normalizeWorkout);
-    setCompletedWorkouts(next);
-  }, []);
+    if (!currentUser) return;
+    const next = (await saveWorkout(normalizeWorkout({ ...record, userId: currentUser.id }))).map(normalizeWorkout);
+    setCompletedWorkouts(next.filter((workout) => workout.userId === currentUser.id));
+  }, [currentUser]);
 
   const resetWorkouts = useCallback(async () => {
     await clearWorkoutData();
@@ -173,7 +177,7 @@ export function WorkoutProgressProvider({ children }: PropsWithChildren) {
       acc[key] = {
         completionCount: current.completionCount + 1,
         totalReps: current.totalReps + workout.totalReps,
-        totalSeconds: current.totalSeconds + workout.durationSeconds,
+        totalSeconds: current.totalSeconds + (workout.totalSeconds ?? workout.durationSeconds),
         totalMinutes: current.totalMinutes + workout.totalMinutes,
         lastCompletedAt: !current.lastCompletedAt || workout.completedAt > current.lastCompletedAt ? workout.completedAt : current.lastCompletedAt
       };

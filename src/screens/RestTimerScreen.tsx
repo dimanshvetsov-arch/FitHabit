@@ -14,8 +14,10 @@ import { RootStackScreenProps } from "@/types";
 export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"RestTimer">) {
   const { theme } = useThemeMode();
   const { preferences } = usePreferences();
-  const { setup, completedSets, completedReps, elapsedSeconds } = route.params;
+  const { setup, completedSets, completedReps, elapsedSeconds, repsBySet } = route.params;
   const [remaining, setRemaining] = useState(setup.restSeconds);
+  const nextRound = completedSets + 1;
+  const roundLabel = setup.trackingType === "reps_sets" ? "set" : "round";
 
   useEffect(() => {
     if (remaining <= 0) {
@@ -27,9 +29,10 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
       }
       navigation.replace("ActiveWorkout", {
         setup,
-        initialSet: completedSets + 1,
+        initialSet: nextRound,
         initialCompletedReps: completedReps,
-        initialElapsedSeconds: elapsedSeconds + setup.restSeconds
+        initialElapsedSeconds: elapsedSeconds + setup.restSeconds,
+        repsBySet
       });
       return;
     }
@@ -38,18 +41,19 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
     }
     const timeout = setTimeout(() => setRemaining((value) => value - 1), 1000);
     return () => clearTimeout(timeout);
-  }, [completedReps, completedSets, elapsedSeconds, navigation, preferences.restTimerSound, remaining, setup]);
+  }, [completedReps, elapsedSeconds, navigation, nextRound, preferences.hapticFeedback, preferences.restTimerSound, remaining, repsBySet, setup]);
 
   return (
     <AppScreen scroll={false} contentStyle={styles.screen}>
       <View style={styles.backWrap}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
       </View>
-      <Text style={[styles.kicker, { color: theme.colors.muted }]}>Rest before set {completedSets + 1}</Text>
+      <Text style={[styles.kicker, { color: theme.colors.muted }]}>Rest Time</Text>
       <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
         <ProgressRing progress={(setup.restSeconds - remaining) / setup.restSeconds} size={230} label="rest" />
         <Text style={[styles.timer, { color: theme.colors.text }]}>{remaining}s</Text>
-        <Text style={[styles.meta, { color: theme.colors.muted }]}>{completedReps} reps completed · {Math.round(elapsedSeconds / 60)} min in</Text>
+        <Text style={[styles.meta, { color: theme.colors.muted }]}>Next {roundLabel} {nextRound} of {setup.sets}</Text>
+        {completedReps > 0 ? <Text style={[styles.metaSmall, { color: theme.colors.muted }]}>{completedReps} reps completed - {Math.round(elapsedSeconds / 60)} min in</Text> : null}
       </View>
       <AppButton
         title="Skip Rest"
@@ -57,9 +61,10 @@ export function RestTimerScreen({ navigation, route }: RootStackScreenProps<"Res
         onPress={() =>
           navigation.replace("ActiveWorkout", {
             setup,
-            initialSet: completedSets + 1,
+            initialSet: nextRound,
             initialCompletedReps: completedReps,
-            initialElapsedSeconds: elapsedSeconds + (setup.restSeconds - remaining)
+            initialElapsedSeconds: elapsedSeconds + (setup.restSeconds - remaining),
+            repsBySet
           })
         }
       />
@@ -97,7 +102,13 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
+    textAlign: "center"
+  },
+  metaSmall: {
+    marginTop: -8,
+    fontSize: 12,
+    fontWeight: "800",
     textAlign: "center"
   }
 });

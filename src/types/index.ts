@@ -4,6 +4,7 @@ export type ExerciseCategory = "Push" | "Pull" | "Legs" | "Core" | "Full Body" |
 
 export type Difficulty = "Easy" | "Medium" | "Hard";
 export type TrackingType = "reps_sets" | "timer_only" | "distance_time" | "reps_timer";
+export type WorkoutTrackingType = TrackingType | "timed_reps";
 
 export type Exercise = {
   id: string;
@@ -34,14 +35,22 @@ export type WorkoutSetup = {
   repsGoal?: number;
   routineDate?: string;
   routineItemId?: string;
+  repsBySet?: number[];
 };
 
 export type WorkoutRecord = {
   id: string;
+  userId?: string;
   exerciseName: string;
   variationName?: string;
-  trackingType: TrackingType;
+  trackingType: WorkoutTrackingType;
   completedAt: string;
+  setDurationSeconds?: number;
+  restTimeSeconds?: number;
+  setsCompleted?: number;
+  roundsCompleted?: number;
+  repsBySet?: number[];
+  totalSeconds?: number;
   totalMinutes: number;
   totalReps: number;
   completedSets: number;
@@ -77,8 +86,8 @@ export type RootStackParamList = {
     goalTimeSeconds?: number;
     repsGoal?: number;
   };
-  ActiveWorkout: { setup: WorkoutSetup; initialSet?: number; initialCompletedReps?: number; initialElapsedSeconds?: number };
-  RestTimer: { setup: WorkoutSetup; completedSets: number; completedReps: number; elapsedSeconds: number };
+  ActiveWorkout: { setup: WorkoutSetup; initialSet?: number; initialCompletedReps?: number; initialElapsedSeconds?: number; repsBySet?: number[] };
+  RestTimer: { setup: WorkoutSetup; completedSets: number; completedReps: number; elapsedSeconds: number; repsBySet?: number[] };
   WorkoutSummary: { record: WorkoutRecord };
   CalendarDayDetail: { date: string };
   ProfileEdit: undefined;
